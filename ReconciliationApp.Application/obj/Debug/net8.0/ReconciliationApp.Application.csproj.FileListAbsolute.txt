@@ -1,0 +1,16 @@
+/workspaces/cashapplicationpymes/ReconciliationApp.Application/bin/Debug/net8.0/ReconciliationApp.Application.deps.json
+/workspaces/cashapplicationpymes/ReconciliationApp.Application/bin/Debug/net8.0/ReconciliationApp.Application.dll
+/workspaces/cashapplicationpymes/ReconciliationApp.Application/bin/Debug/net8.0/ReconciliationApp.Application.pdb
+/workspaces/cashapplicationpymes/ReconciliationApp.Application/bin/Debug/net8.0/ReconciliationApp.Domain.dll
+/workspaces/cashapplicationpymes/ReconciliationApp.Application/bin/Debug/net8.0/ReconciliationApp.Domain.pdb
+/workspaces/cashapplicationpymes/ReconciliationApp.Application/obj/Debug/net8.0/ReconciliationApp.Application.csproj.AssemblyReference.cache
+/workspaces/cashapplicationpymes/ReconciliationApp.Application/obj/Debug/net8.0/ReconciliationApp.Application.GeneratedMSBuildEditorConfig.editorconfig
+/workspaces/cashapplicationpymes/ReconciliationApp.Application/obj/Debug/net8.0/ReconciliationApp.Application.AssemblyInfoInputs.cache
+/workspaces/cashapplicationpymes/ReconciliationApp.Application/obj/Debug/net8.0/ReconciliationApp.Application.AssemblyInfo.cs
+/workspaces/cashapplicationpymes/ReconciliationApp.Application/obj/Debug/net8.0/ReconciliationApp.Application.csproj.CoreCompileInputs.cache
+/workspaces/cashapplicationpymes/ReconciliationApp.Application/obj/Debug/net8.0/ReconciliationApp.Application.sourcelink.json
+/workspaces/cashapplicationpymes/ReconciliationApp.Application/obj/Debug/net8.0/Reconcil.91AA2C66.Up2Date
+/workspaces/cashapplicationpymes/ReconciliationApp.Application/obj/Debug/net8.0/ReconciliationApp.Application.dll
+/workspaces/cashapplicationpymes/ReconciliationApp.Application/obj/Debug/net8.0/refint/ReconciliationApp.Application.dll
+/workspaces/cashapplicationpymes/ReconciliationApp.Application/obj/Debug/net8.0/ReconciliationApp.Application.pdb
+/workspaces/cashapplicationpymes/ReconciliationApp.Application/obj/Debug/net8.0/ref/ReconciliationApp.Application.dll

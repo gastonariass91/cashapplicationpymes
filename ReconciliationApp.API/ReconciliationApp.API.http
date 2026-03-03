@@ -1,0 +1,6 @@
+@ReconciliationApp.API_HostAddress = http://localhost:5081
+
+GET {{ReconciliationApp.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
