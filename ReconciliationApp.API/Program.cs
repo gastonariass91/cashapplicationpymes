@@ -1,7 +1,9 @@
-using ReconciliationApp.Application.Features.Reconciliation.ReconcileRun;
-using ReconciliationApp.Application.Features.Reconciliation.ReconcileResult;
-
+using FluentValidation;
+using Microsoft.AspNetCore.HttpLogging;
 using ReconciliationApp.API.Endpoints;
+using ReconciliationApp.API.ErrorHandling;
+using ReconciliationApp.API.Observability;
+using ReconciliationApp.API.Validation;
 using ReconciliationApp.Application.DependencyInjection;
 using ReconciliationApp.Infrastructure.DependencyInjection;
 using ReconciliationApp.Application.Features.Batches.CreateBatch;
@@ -9,6 +11,8 @@ using ReconciliationApp.Application.Features.Batches.CreateRun;
 using ReconciliationApp.Application.Features.Companies.CreateCompany;
 using ReconciliationApp.Application.Features.Imports.UploadDebtCsv;
 using ReconciliationApp.Application.Features.Imports.UploadPaymentsCsv;
+using ReconciliationApp.Application.Features.Reconciliation.ReconcileRun;
+using ReconciliationApp.Application.Features.Reconciliation.ReconcileResult;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +20,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Handlers (por ahora directos; luego migramos a MediatR)
+// Handlers
 builder.Services.AddScoped<CreateCompanyHandler>();
 builder.Services.AddScoped<CreateBatchHandler>();
 builder.Services.AddScoped<CreateRunHandler>();
@@ -25,8 +29,25 @@ builder.Services.AddScoped<UploadPaymentsCsvHandler>();
 builder.Services.AddScoped<ReconcileRunHandler>();
 builder.Services.AddScoped<ReconcileResultHandler>();
 
-// Errores estándar
+// Validation (FluentValidation)
+builder.Services.AddValidatorsFromAssemblyContaining<CreateCompanyRequestValidator>();
+
+// Health checks
+var cs = builder.Configuration.GetConnectionString("Default");
+builder.Services.AddHealthChecks().AddNpgSql(cs!, name: "postgres");
+
+// Errors (ProblemDetails + ExceptionHandler)
 builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+// Http Logging
+builder.Services.AddHttpLogging(o =>
+{
+    o.LoggingFields = HttpLoggingFields.RequestMethod
+                   | HttpLoggingFields.RequestPath
+                   | HttpLoggingFields.ResponseStatusCode
+                   | HttpLoggingFields.Duration;
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -35,6 +56,10 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+
+// Observability
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseHttpLogging();
 
 app.UseSwagger();
 app.UseSwaggerUI();
