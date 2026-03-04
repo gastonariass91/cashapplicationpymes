@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="../buildMultiTargeting/ReconciliationApp.API.props" />
-</Project>

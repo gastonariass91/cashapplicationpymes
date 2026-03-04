@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="../build/ReconciliationApp.API.props" />
-</Project>
