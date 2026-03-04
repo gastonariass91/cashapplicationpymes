@@ -12,8 +12,8 @@ using ReconciliationApp.Infrastructure.Persistence;
 namespace ReconciliationApp.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260303022115_CoreEntities")]
-    partial class CoreEntities
+    [Migration("20260303194434_AddReconciliation")]
+    partial class AddReconciliation
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -39,25 +39,19 @@ namespace ReconciliationApp.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<DateTimeOffset?>("ReconciledAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("RunNumber")
                         .HasColumnType("integer")
                         .HasColumnName("run_number");
 
-                    b.Property<Guid?>("batch_id")
-                        .HasColumnType("uuid");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("batch_id");
 
                     b.HasIndex("BatchId", "RunNumber")
                         .IsUnique();
 
-                    b.ToTable("batch_runs", null, t =>
-                        {
-                            t.Property("batch_id")
-                                .HasColumnName("batch_id1");
-                        });
+                    b.ToTable("batch_runs", (string)null);
                 });
 
             modelBuilder.Entity("ReconciliationApp.Domain.Entities.Batching.ReconciliationBatch", b =>
@@ -151,12 +145,87 @@ namespace ReconciliationApp.Infrastructure.Persistence.Migrations
                     b.ToTable("customers", (string)null);
                 });
 
+            modelBuilder.Entity("ReconciliationApp.Domain.Entities.Imports.ImportRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BatchRunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("batch_run_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DataJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("data_json");
+
+                    b.Property<int>("RowNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("row_number");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchRunId", "Type", "RowNumber")
+                        .IsUnique();
+
+                    b.ToTable("import_rows", (string)null);
+                });
+
+            modelBuilder.Entity("ReconciliationApp.Domain.Entities.Reconciliation.ReconciliationMatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("BatchRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CustomerId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("DebtRowNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PaymentRowNumber")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchRunId", "DebtRowNumber")
+                        .IsUnique();
+
+                    b.HasIndex("BatchRunId", "PaymentRowNumber")
+                        .IsUnique();
+
+                    b.ToTable("reconciliation_matches", (string)null);
+                });
+
             modelBuilder.Entity("ReconciliationApp.Domain.Entities.Batching.BatchRun", b =>
                 {
-                    b.HasOne("ReconciliationApp.Domain.Entities.Batching.ReconciliationBatch", null)
+                    b.HasOne("ReconciliationApp.Domain.Entities.Batching.ReconciliationBatch", "Batch")
                         .WithMany("Runs")
-                        .HasForeignKey("batch_id")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Batch");
                 });
 
             modelBuilder.Entity("ReconciliationApp.Domain.Entities.Core.Customer", b =>
@@ -168,6 +237,28 @@ namespace ReconciliationApp.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Company");
+                });
+
+            modelBuilder.Entity("ReconciliationApp.Domain.Entities.Imports.ImportRow", b =>
+                {
+                    b.HasOne("ReconciliationApp.Domain.Entities.Batching.BatchRun", "BatchRun")
+                        .WithMany()
+                        .HasForeignKey("BatchRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BatchRun");
+                });
+
+            modelBuilder.Entity("ReconciliationApp.Domain.Entities.Reconciliation.ReconciliationMatch", b =>
+                {
+                    b.HasOne("ReconciliationApp.Domain.Entities.Batching.BatchRun", "BatchRun")
+                        .WithMany()
+                        .HasForeignKey("BatchRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BatchRun");
                 });
 
             modelBuilder.Entity("ReconciliationApp.Domain.Entities.Batching.ReconciliationBatch", b =>

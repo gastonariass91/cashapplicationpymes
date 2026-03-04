@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ReconciliationApp.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class CoreEntities : Migration
+    public partial class InitialClean : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -68,15 +68,14 @@ namespace ReconciliationApp.Infrastructure.Persistence.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     batch_id = table.Column<Guid>(type: "uuid", nullable: false),
                     run_number = table.Column<int>(type: "integer", nullable: false),
-                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    batch_id1 = table.Column<Guid>(type: "uuid", nullable: true)
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_batch_runs", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_batch_runs_reconciliation_batches_batch_id1",
-                        column: x => x.batch_id1,
+                        name: "FK_batch_runs_reconciliation_batches_batch_id",
+                        column: x => x.batch_id,
                         principalTable: "reconciliation_batches",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -87,11 +86,6 @@ namespace ReconciliationApp.Infrastructure.Persistence.Migrations
                 table: "batch_runs",
                 columns: new[] { "batch_id", "run_number" },
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_batch_runs_batch_id1",
-                table: "batch_runs",
-                column: "batch_id1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_customers_company_id_customer_key",

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ReconciliationApp.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d13b7ecdcce7248410c05342ba5c73848848b1f8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+47800ed9e559147f9c62864f8a8edfb515327c86")]
 [assembly: System.Reflection.AssemblyProductAttribute("ReconciliationApp.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ReconciliationApp.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
