@@ -1,3 +1,6 @@
+using ReconciliationApp.Application.Features.Reconciliation.ReconcileRun;
+using ReconciliationApp.Application.Features.Reconciliation.ReconcileResult;
+
 using ReconciliationApp.API.Endpoints;
 using ReconciliationApp.Application.DependencyInjection;
 using ReconciliationApp.Infrastructure.DependencyInjection;
@@ -19,6 +22,8 @@ builder.Services.AddScoped<CreateBatchHandler>();
 builder.Services.AddScoped<CreateRunHandler>();
 builder.Services.AddScoped<UploadDebtCsvHandler>();
 builder.Services.AddScoped<UploadPaymentsCsvHandler>();
+builder.Services.AddScoped<ReconcileRunHandler>();
+builder.Services.AddScoped<ReconcileResultHandler>();
 
 // Errores estándar
 builder.Services.AddProblemDetails();

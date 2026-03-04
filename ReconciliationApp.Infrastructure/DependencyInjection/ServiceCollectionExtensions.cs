@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IBatchRepository, EfBatchRepository>();
         services.AddScoped<IBatchRunRepository, EfBatchRunRepository>();
         services.AddScoped<IImportRowRepository, EfImportRowRepository>();
+        services.AddScoped<IReconciliationMatchRepository, EfReconciliationMatchRepository>();
 
         services.AddScoped<IRunNumberService, RunNumberService>();
 
