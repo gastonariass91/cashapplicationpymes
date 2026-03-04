@@ -1,0 +1,117 @@
+@using Microsoft.AspNetCore.Components.Routing
+@using ReconciliationApp.Frontend.State
+@inject NavigationManager Nav
+@inject LayoutState Layout
+@implements IDisposable
+
+<div class="overlay @(Layout.IsSidebarOpen ? "show" : "")" @onclick="Layout.CloseSidebar"></div>
+
+<aside class="sidebar @(Layout.IsSidebarOpen ? "open" : "")" aria-hidden="@(Layout.IsSidebarOpen ? "false" : "true")">
+  <div class="sTop">
+    <div class="brandMark">
+      <div class="companyLogo">AG</div>
+      <div class="brandText">
+        <b>Alimentos Garcia SA</b>
+        <span>Conciliación PyMEs</span>
+      </div>
+    </div>
+    <button class="iconBtn" title="Cerrar menú" @onclick="Layout.CloseSidebar">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <nav class="nav">
+    <NavLink class="navlink" href="/reconciliation" Match="NavLinkMatch.Prefix" @onclick="Layout.CloseSidebar">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9"/><path d="M9 21V9h6v12"/></svg>
+      <div class="text">
+        <div class="label">Conciliación</div>
+        <div class="sub">Runs y resultados</div>
+      </div>
+    </NavLink>
+
+    <NavLink class="navlink" href="/imports" Match="NavLinkMatch.Prefix" @onclick="Layout.CloseSidebar">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+      <div class="text">
+        <div class="label">Importaciones</div>
+        <div class="sub">Deudas y pagos</div>
+      </div>
+    </NavLink>
+
+    <NavLink class="navlink" href="/reports" Match="NavLinkMatch.Prefix" @onclick="Layout.CloseSidebar">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 5h16"/><path d="M20 5v14"/><path d="M4 19h16"/></svg>
+      <div class="text">
+        <div class="label">Reportes</div>
+        <div class="sub">Exportaciones</div>
+      </div>
+    </NavLink>
+  </nav>
+
+  <div class="sBottom">
+    <div class="userCard">
+      <div style="display:flex; gap:10px; align-items:center; min-width:0;">
+        <div class="avatar">GA</div>
+        <div class="userMeta">
+          <b>Gasti</b>
+          <span>Administración</span>
+        </div>
+      </div>
+      <button class="iconBtn" title="Configuración" @onclick="Settings">
+        <svg class="icon" viewBox="0 0 24 24">
+          <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>
+          <path d="M19.4 15a7.8 7.8 0 0 0 .1-1l2-1.5-2-3.4-2.4 1a7.7 7.7 0 0 0-1.7-1l-.3-2.6H10l-.3 2.6a7.7 7.7 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.5a7.8 7.8 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7.7 7.7 0 0 0 1.7 1l.3 2.6h4.1l.3-2.6a7.7 7.7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.5z"/>
+        </svg>
+      </button>
+    </div>
+    <div style="color:var(--muted); font-size:11px; padding:0 6px;">
+      Atajos: <span class="mono">⌘K</span> buscar · <span class="mono">A</span> aceptar · <span class="mono">X</span> excepción · <span class="mono">N</span> siguiente · <span class="mono">Esc</span> cerrar
+    </div>
+  </div>
+</aside>
+
+<div class="app">
+  <main class="main">
+    <div class="wrap">
+      <div class="header card">
+        <div class="hLeft">
+          <button class="iconBtn" title="Menú" @onclick="Layout.ToggleSidebar">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div class="hLogo" title="Logo empresa">AG</div>
+          <div class="hCompany">
+            <b>Alimentos Garcia SA</b>
+            <span>Conciliación · Periodo <span class="mono">Mar 2026</span> · Run <span class="mono">#2</span></span>
+          </div>
+        </div>
+
+        <div class="hRight">
+          <div class="badge"><span class="dot good"></span> Auto <b style="color:var(--text); font-weight:950;">—</b></div>
+          <div class="badge"><span class="dot warn"></span> Pendientes <b style="color:var(--text); font-weight:950;">—</b></div>
+          <div class="badge"><span class="dot bad"></span> Excepciones <b style="color:var(--text); font-weight:950;">—</b></div>
+        </div>
+      </div>
+
+      <div class="shellBody">
+        @ChildContent
+      </div>
+    </div>
+  </main>
+</div>
+
+@code {
+  [Parameter] public RenderFragment? ChildContent { get; set; }
+
+  protected override void OnInitialized()
+  {
+    Layout.OnChange += StateHasChanged;
+  }
+
+  public void Dispose()
+  {
+    Layout.OnChange -= StateHasChanged;
+  }
+
+  private void Settings()
+  {
+    // TODO: settings/drawer real
+  }
+}
