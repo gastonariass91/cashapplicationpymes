@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReconciliationApp.Infrastru
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReconciliationApp.API", "ReconciliationApp.API\ReconciliationApp.API.csproj", "{DD693BA1-2B60-4F41-8CDB-22B1B3158B17}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReconciliationApp.Application.Tests", "ReconciliationApp.Application.Tests\ReconciliationApp.Application.Tests.csproj", "{1D881739-9A6B-4F99-BBB5-DC36A9806EC6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{DD693BA1-2B60-4F41-8CDB-22B1B3158B17}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DD693BA1-2B60-4F41-8CDB-22B1B3158B17}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DD693BA1-2B60-4F41-8CDB-22B1B3158B17}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D881739-9A6B-4F99-BBB5-DC36A9806EC6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D881739-9A6B-4F99-BBB5-DC36A9806EC6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D881739-9A6B-4F99-BBB5-DC36A9806EC6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D881739-9A6B-4F99-BBB5-DC36A9806EC6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
