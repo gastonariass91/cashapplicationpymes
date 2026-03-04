@@ -237,81 +237,86 @@ th.sel, td.sel{width:42px; padding-left:10px; padding-right:8px}
   .sidebar{left:12px; top:12px; bottom:12px; width:min(86vw, 320px)}
   .drawer{top:12px; bottom:12px; right:12px; width:min(92vw, 520px)}
 }
-
-/* ==== FIX CTO: overlays no deben bloquear clicks cuando están ocultos ==== */
-.overlay {
-  pointer-events: none !important;
+/* --- Overlays: sidebar vs drawer (no bloquear clicks cuando están ocultos) --- */
+.overlay,
+.drawerOverlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.55);
+  opacity:0;
+  pointer-events:none; /* CLAVE: no bloquea header/hamburguesa */
+  transition:opacity .18s ease;
+  z-index:80;
 }
 
-.overlay.show {
-  pointer-events: auto !important;
+.overlay.show,
+.drawerOverlay.show{
+  opacity:1;
+  pointer-events:auto;
 }
 
-/* asegurar que el botón menu quede siempre arriba */
-.iconBtn {
+/* Drawer por encima del overlay */
+.drawer{ z-index:90; }
+
+/* Sidebar por encima del overlay */
+.sidebar{ z-index:100; }
+
+/* Hotfix: asegurar click en hamburguesa (header arriba de overlays) */
+.header{
+  position: sticky;
+  top: 16px;
+  z-index: 200;
+}
+.header .iconBtn{
   position: relative;
-  z-index: 10000;
+  z-index: 210;
 }
 
-
-/* ==== AppShell minimal sidebar behavior ==== */
-.sidebar{
-  position: fixed;
-  top: 0; left: 0; bottom: 0;
-  width: 280px;
-  transform: translateX(-110%);
-  transition: transform .18s ease;
-  background: rgba(10,16,30,.98);
-  border-right: 1px solid rgba(255,255,255,.08);
-  box-shadow: 0 20px 80px rgba(0,0,0,.45);
+/* overlays quedan por debajo del header */
+.overlay, .drawerOverlay{
+  z-index: 120;
 }
 
-.sidebar.open{
-  transform: translateX(0);
+/* Fix: botones no heredan color en algunos navegadores */
+.tab, .pill, .btn, .iconBtn{
+  color: var(--text);
 }
 
-.overlay{
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.45);
-  opacity: 0;
-  transition: opacity .18s ease;
-  pointer-events: none;
-}
+/* === STACKING MAP (único, definitivo) === */
+.footerBar{ z-index:20; }
 
-.overlay.show{
-  opacity: 1;
-  pointer-events: auto;
-}
+/* overlays (sidebar + drawer) */
+.overlay, .drawerOverlay{ z-index:120 !important; }
 
-/* ==== Sidebar + overlay (pro) ==== */
-.sidebar{
-  position: fixed;
-  top:0; left:0; bottom:0;
-  width: 280px;
-  transform: translateX(-100%);
-  transition: transform .22s ease;
-  z-index: 950000;
-}
+/* drawer siempre arriba del overlay */
+.drawer{ z-index:130 !important; }
 
-.sidebar.open{
-  transform: translateX(0);
-}
+/* header arriba del contenido y overlays */
+.header{ position:sticky; top:16px; z-index:200 !important; }
+.header .iconBtn{ position:relative; z-index:210 !important; }
 
-.overlay{
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.45);
-  opacity: 0;
-  transition: opacity .18s ease;
-  pointer-events: none;
-  z-index: 900000;
-}
+/* sidebar arriba de todo (excepto casos extremos) */
+.sidebar{ z-index:220 !important; }
 
-.overlay.show{
-  opacity: 1;
-  pointer-events: auto;
-}
+/* Fix: botones/tabs no heredan color */
+.tab, .pill, .btn, .iconBtn{ color: var(--text) !important; }
 
-/* El header no debe tapar el menú */
-.header{ position: relative; z-index: 1; }
+/* === UI LAYERS (definitivo) === */
+.overlay, .drawerOverlay{
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.55);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .18s ease;
+  z-index:120;
+}
+.overlay.show, .drawerOverlay.show{
+  opacity:1;
+  pointer-events:auto;
+}
+.drawer{ z-index:130; }
+.header{ position:sticky; top:16px; z-index:200; }
+.sidebar{ z-index:220; }
+
+/* Fix: tabs/botones siempre con color */
+.tab, .pill, .btn, .iconBtn{ color:var(--text); }
