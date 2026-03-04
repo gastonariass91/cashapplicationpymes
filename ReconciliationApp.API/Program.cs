@@ -1,51 +1,56 @@
-using ReconciliationApp.Domain.Entities.Reconciliation;
-
 using Microsoft.EntityFrameworkCore;
 using ReconciliationApp.API.Contracts;
-using ReconciliationApp.Application.Abstractions;
 using ReconciliationApp.Application.Abstractions.Repositories;
+using ReconciliationApp.Application.DependencyInjection;
 using ReconciliationApp.Application.Features.Batches.CreateBatch;
 using ReconciliationApp.Application.Features.Batches.CreateRun;
 using ReconciliationApp.Application.Features.Companies.CreateCompany;
+using ReconciliationApp.Application.Features.Imports;
+using ReconciliationApp.Application.Features.Imports.UploadDebtCsv;
+using ReconciliationApp.Application.Features.Imports.UploadPaymentsCsv;
+using ReconciliationApp.Domain.Entities.Reconciliation;
+using ReconciliationApp.Infrastructure.DependencyInjection;
 using ReconciliationApp.Infrastructure.Persistence;
-using ReconciliationApp.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = builder.Configuration.GetConnectionString("Default");
-if (string.IsNullOrWhiteSpace(connectionString))
-    throw new InvalidOperationException("Missing ConnectionStrings:Default in configuration.");
+// DI modular (profesional)
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure(builder.Configuration);
 
-builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
-
-// Repos (Infrastructure)
-builder.Services.AddScoped<ICompanyRepository, EfCompanyRepository>();
-builder.Services.AddScoped<IBatchRepository, EfBatchRepository>();
-builder.Services.AddScoped<ReconciliationApp.Application.Abstractions.Sql.IRunNumberService, ReconciliationApp.Infrastructure.Sql.RunNumberService>();
-builder.Services.AddScoped<ReconciliationApp.Application.Abstractions.Repositories.IBatchRunRepository, ReconciliationApp.Infrastructure.Repositories.EfBatchRunRepository>();
-builder.Services.AddScoped<ReconciliationApp.Infrastructure.Sql.RunNumberService>();
-builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
-
-// Handlers (CQRS)
+// Handlers (por ahora directos; luego podemos pasar a MediatR)
 builder.Services.AddScoped<CreateCompanyHandler>();
 builder.Services.AddScoped<CreateBatchHandler>();
 builder.Services.AddScoped<CreateRunHandler>();
+builder.Services.AddScoped<UploadDebtCsvHandler>();
+builder.Services.AddScoped<UploadPaymentsCsvHandler>();
+
+// Observabilidad / Errores estándar
+builder.Services.AddProblemDetails();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddScoped<ReconciliationApp.Application.Abstractions.Repositories.IImportRowRepository, ReconciliationApp.Infrastructure.Repositories.EfImportRowRepository>();
-builder.Services.AddScoped<ReconciliationApp.Application.Features.Imports.UploadDebtCsv.UploadDebtCsvHandler>();
-builder.Services.AddScoped<ReconciliationApp.Application.Features.Imports.UploadPaymentsCsv.UploadPaymentsCsvHandler>();
 var app = builder.Build();
+
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 
 app.UseSwagger();
 app.UseSwaggerUI();
 
-
-app.MapGet("/batches/{batchId:guid}/runs/{runNumber:int}/preview", async (Guid batchId, int runNumber, ReconciliationApp.Application.Abstractions.Repositories.IBatchRepository batches, ReconciliationApp.Application.Abstractions.Repositories.IBatchRunRepository batchRuns, ReconciliationApp.Application.Abstractions.Repositories.IImportRowRepository importRows, CancellationToken ct) =>
+// Reconciliation
+app.MapGet("/batches/{batchId:guid}/runs/{runNumber:int}/preview", async (
+    Guid batchId,
+    int runNumber,
+    IBatchRepository batches,
+    IBatchRunRepository batchRuns,
+    IImportRowRepository importRows,
+    CancellationToken ct) =>
 {
-    var res = await ReconciliationApp.Application.Features.Reconciliation.Preview.ReconcilePreview.ExecuteAsync(batchId, runNumber, batches, batchRuns, importRows, ct);
+    var res = await ReconciliationApp.Application.Features.Reconciliation.Preview.ReconcilePreview
+        .ExecuteAsync(batchId, runNumber, batches, batchRuns, importRows, ct);
+
     return Results.Ok(res);
 })
 .WithName("ReconcilePreview")
@@ -56,9 +61,9 @@ app.MapPost("/batches/{batchId:guid}/runs/{runNumber:int}/reconcile", async (
     Guid batchId,
     int runNumber,
     AppDbContext db,
-    ReconciliationApp.Application.Abstractions.Repositories.IBatchRepository batches,
-    ReconciliationApp.Application.Abstractions.Repositories.IBatchRunRepository batchRuns,
-    ReconciliationApp.Application.Abstractions.Repositories.IImportRowRepository importRows,
+    IBatchRepository batches,
+    IBatchRunRepository batchRuns,
+    IImportRowRepository importRows,
     CancellationToken ct) =>
 {
     var run = await db.BatchRuns.SingleOrDefaultAsync(r => r.BatchId == batchId && r.RunNumber == runNumber, ct);
@@ -88,7 +93,8 @@ app.MapPost("/batches/{batchId:guid}/runs/{runNumber:int}/reconcile", async (
         });
     }
 
-    var preview = await ReconciliationApp.Application.Features.Reconciliation.Preview.ReconcilePreview.ExecuteAsync(batchId, runNumber, batches, batchRuns, importRows, ct);
+    var preview = await ReconciliationApp.Application.Features.Reconciliation.Preview.ReconcilePreview
+        .ExecuteAsync(batchId, runNumber, batches, batchRuns, importRows, ct);
 
     await db.ReconciliationMatches.Where(x => x.BatchRunId == run.Id).ExecuteDeleteAsync(ct);
 
@@ -151,30 +157,45 @@ app.MapGet("/batches/{batchId:guid}/runs/{runNumber:int}/reconcile-result", asyn
 .WithTags("Reconciliation")
 .WithOpenApi();
 
-app.MapGet("/health", () => "API Running");
+// Health
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
+   .WithName("Health")
+   .WithOpenApi();
 
 // Companies
 app.MapPost("/companies", async (CreateCompanyRequest req, CreateCompanyHandler handler, CancellationToken ct) =>
 {
     var result = await handler.Handle(new CreateCompanyCommand(req.Name), ct);
     return Results.Created($"/companies/{result.CompanyId}", result);
-});
+})
+.WithName("CreateCompany")
+.WithOpenApi();
 
 // Batches
 app.MapPost("/batches", async (CreateBatchRequest req, CreateBatchHandler handler, CancellationToken ct) =>
 {
     var result = await handler.Handle(new CreateBatchCommand(req.CompanyId, req.PeriodFrom, req.PeriodTo), ct);
     return Results.Created($"/batches/{result.BatchId}", result);
-});
+})
+.WithName("CreateBatch")
+.WithOpenApi();
 
 // Runs
 app.MapPost("/batches/{batchId:guid}/runs", async (Guid batchId, CreateRunHandler handler, CancellationToken ct) =>
 {
     var result = await handler.Handle(new CreateRunCommand(batchId), ct);
     return Results.Ok(result);
-});
+})
+.WithName("CreateRun")
+.WithOpenApi();
 
-app.MapPost("/batches/{batchId:guid}/runs/{runNumber:int}/debt-csv", async (Guid batchId, int runNumber, ReconciliationApp.Application.Features.Imports.UploadCsvRequest req, ReconciliationApp.Application.Features.Imports.UploadDebtCsv.UploadDebtCsvHandler handler, CancellationToken ct) =>
+// Imports
+app.MapPost("/batches/{batchId:guid}/runs/{runNumber:int}/debt-csv", async (
+    Guid batchId,
+    int runNumber,
+    UploadCsvRequest req,
+    UploadDebtCsvHandler handler,
+    CancellationToken ct) =>
 {
     await handler.Handle(batchId, runNumber, req, ct);
     return Results.NoContent();
@@ -182,11 +203,17 @@ app.MapPost("/batches/{batchId:guid}/runs/{runNumber:int}/debt-csv", async (Guid
 .WithName("UploadDebtCsv")
 .WithOpenApi();
 
-app.MapPost("/batches/{batchId:guid}/runs/{runNumber:int}/payments-csv", async (Guid batchId, int runNumber, ReconciliationApp.Application.Features.Imports.UploadCsvRequest req, ReconciliationApp.Application.Features.Imports.UploadPaymentsCsv.UploadPaymentsCsvHandler handler, CancellationToken ct) =>
+app.MapPost("/batches/{batchId:guid}/runs/{runNumber:int}/payments-csv", async (
+    Guid batchId,
+    int runNumber,
+    UploadCsvRequest req,
+    UploadPaymentsCsvHandler handler,
+    CancellationToken ct) =>
 {
     await handler.Handle(batchId, runNumber, req, ct);
     return Results.NoContent();
 })
 .WithName("UploadPaymentsCsv")
 .WithOpenApi();
+
 app.Run();
