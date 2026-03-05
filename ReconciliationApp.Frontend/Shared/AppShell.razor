@@ -73,9 +73,10 @@
     <div class="wrap">
       <div class="header card">
         <div class="hLeft">
-          <button type="button" class="iconBtn" title="Menú" @onclick="Layout.ToggleSidebar">
+          <button id="btnMenu" type="button" class="iconBtn" title="Menú" @onclick="ToggleMenu">
             <svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
           </button>
+
           <div class="hLogo" title="Logo empresa">AG</div>
           <div class="hCompany">
             <b>Alimentos Garcia SA</b>
@@ -102,16 +103,27 @@
 
   protected override void OnInitialized()
   {
-    Layout.OnChange += StateHasChanged;
+    Layout.OnChange += HandleLayoutChange;
   }
 
   public void Dispose()
   {
-    Layout.OnChange -= StateHasChanged;
+    Layout.OnChange -= HandleLayoutChange;
+  }
+
+  private void HandleLayoutChange()
+  {
+    InvokeAsync(StateHasChanged);
+  }
+
+  private void ToggleMenu()
+  {
+    Console.WriteLine("[AppShell] ToggleMenu click");
+    Layout.ToggleSidebar();
   }
 
   private void Settings()
   {
-    // TODO: settings/drawer real
+    // TODO
   }
 }
