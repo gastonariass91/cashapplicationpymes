@@ -109,12 +109,17 @@
 
   protected override void OnInitialized()
   {
-    Layout.OnChange += StateHasChanged;
+    Layout.OnChange += OnLayoutChange;
+  }
+
+  private void OnLayoutChange()
+  {
+    InvokeAsync(StateHasChanged);
   }
 
   public void Dispose()
   {
-    Layout.OnChange -= StateHasChanged;
+    Layout.OnChange -= OnLayoutChange;
   }
 
   private void Settings()
