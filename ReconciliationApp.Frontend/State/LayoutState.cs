@@ -9,18 +9,21 @@ public sealed class LayoutState
     public void ToggleSidebar()
     {
         IsSidebarOpen = !IsSidebarOpen;
+        Console.WriteLine($"[LayoutState] ToggleSidebar -> {(IsSidebarOpen ? "OPEN" : "CLOSED")}");
         OnChange?.Invoke();
     }
 
     public void CloseSidebar()
     {
         IsSidebarOpen = false;
+        Console.WriteLine("[LayoutState] CloseSidebar -> CLOSED");
         OnChange?.Invoke();
     }
 
     public void OpenSidebar()
     {
         IsSidebarOpen = true;
+        Console.WriteLine("[LayoutState] OpenSidebar -> OPEN");
         OnChange?.Invoke();
     }
 }

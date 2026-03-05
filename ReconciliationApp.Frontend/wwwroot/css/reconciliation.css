@@ -320,3 +320,10 @@ th.sel, td.sel{width:42px; padding-left:10px; padding-right:8px}
 
 /* Fix: tabs/botones siempre con color */
 .tab, .pill, .btn, .iconBtn{ color:var(--text); }
+/* FIX: en algunos navegadores los <button> no heredan color */
+.tab, .pill, .btn, .iconBtn { color: var(--text); }
+button{ font-family: inherit; }
+
+/* Header arriba para que el botón sea clickeable */
+.header{ position: sticky; top: 16px; z-index: 200; }
+.header .iconBtn{ position: relative; z-index: 210; }
