@@ -1,0 +1,77 @@
+@using ReconciliationApp.Frontend.Models
+@using ReconciliationApp.Frontend.State
+
+<div class="drawerOverlay @(Store.DrawerOpen ? "show" : "")" @onclick="OnCloseRequested"></div>
+
+<aside class="drawer @(Store.DrawerOpen ? "open" : "")" aria-hidden="@(!Store.DrawerOpen)">
+  <div class="drawerHead">
+    <div style="display:flex; flex-direction:column; gap:2px; min-width:0;">
+      <b>@(Store.SelectedRow is null ? "Resolver caso" : $"Resolver · {Store.SelectedRow.Customer}")</b>
+      <span class="small">@DrawerSub()</span>
+    </div>
+
+    <button class="iconBtn" title="Cerrar" @onclick="OnCloseRequested">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="drawerBody">
+    @if (Store.SelectedRow is null)
+    {
+      <div class="callout">Seleccioná una fila para ver el detalle.</div>
+    }
+    else
+    {
+      var r = Store.SelectedRow;
+      <div class="callout"><b>Sugerencia:</b> @r!.Suggestion <span class="small">· Conf @r.Confidence</span></div>
+
+      <div class="list" style="margin-top:12px;">
+        <div class="row">
+          <div class="meta"><b>Resumen</b><small>Deuda #@r.DebtRowNumber (@ReconciliationStore.Money(r.DebtAmount)) ↔ Pago #@r.PaymentRowNumber (@ReconciliationStore.Money(r.PaymentAmount)) · Δ @r.Delta</small></div>
+          <span class="chip neutral">@r.Status</span>
+        </div>
+        <div class="row">
+          <div class="meta"><b>Evidencia</b><small>@r.Evidence</small></div>
+          <span class="chip neutral">@r.Confidence</span>
+        </div>
+        <div class="row">
+          <div class="meta"><b>Regla aplicada</b><small>@r.Rule</small></div>
+          <span class="chip neutral">@ReconciliationUi.TypeLabel(r.Type)</span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="drawerFooter">
+    <span style="flex:1"></span>
+    <button class="btn danger"
+            disabled="@(Store.SelectedRow is null)"
+            @onclick="OnExceptionRequested">
+      Marcar excepción
+    </button>
+
+    <button class="btn primary"
+            disabled="@(Store.SelectedRow is null)"
+            @onclick="OnAcceptRequested">
+      Aceptar
+    </button>
+  </div>
+</aside>
+
+@code {
+  [Parameter, EditorRequired] public ReconciliationStore Store { get; set; } = default!;
+  [Parameter] public EventCallback CloseRequested { get; set; }
+  [Parameter] public EventCallback AcceptRequested { get; set; }
+  [Parameter] public EventCallback ExceptionRequested { get; set; }
+
+  Task OnCloseRequested() => CloseRequested.InvokeAsync();
+  Task OnAcceptRequested() => AcceptRequested.InvokeAsync();
+  Task OnExceptionRequested() => ExceptionRequested.InvokeAsync();
+
+  string DrawerSub()
+  {
+    if (Store.SelectedRow is null) return "Seleccioná una fila";
+    var r = Store.SelectedRow;
+    return $"{ReconciliationUi.TypeLabel(r.Type)} · {r.Rule}";
+  }
+}

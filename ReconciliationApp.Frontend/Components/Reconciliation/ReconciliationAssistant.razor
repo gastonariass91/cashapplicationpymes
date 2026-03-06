@@ -1,0 +1,47 @@
+@using ReconciliationApp.Frontend.Models
+@using ReconciliationApp.Frontend.State
+
+<div class="side card">
+  <div class="panelHead">
+    <div style="display:flex; flex-direction:column; gap:2px;">
+      <b>Asistente</b>
+      <span>Acción guiada (bulk)</span>
+    </div>
+  </div>
+
+  <div class="box">
+    <p class="sectionTitle">Aceptación en bloque</p>
+    <div class="callout" style="margin-bottom:10px;">
+      <b>Recomendación:</b> aceptá <span class="mono">Alta</span> y (opcional) <span class="mono">Media</span>.
+    </div>
+
+    <div class="kv">
+      <div class="k">Seleccionadas</div><div><b>@Store.Selected.Count</b></div>
+      <div class="k">Visibles (filtro)</div><div><b>@Store.VisibleRows().Count()</b></div>
+      <div class="k">Auto totales</div><div><b>@Store.AutoCount</b></div>
+    </div>
+
+    <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+      <button class="btn primary"
+              disabled="@(Store.Selected.Count==0 || Store.View!=ReconciliationView.Auto)"
+              @onclick="OnAcceptSelected">
+        Aceptar seleccionadas
+      </button>
+
+      <button class="btn"
+              disabled="@(Store.View!=ReconciliationView.Auto || !Store.VisibleRows().Any())"
+              @onclick="OnAcceptVisible">
+        Aceptar visibles
+      </button>
+    </div>
+  </div>
+</div>
+
+@code {
+  [Parameter, EditorRequired] public ReconciliationStore Store { get; set; } = default!;
+  [Parameter] public EventCallback AcceptSelectedRequested { get; set; }
+  [Parameter] public EventCallback AcceptVisibleRequested { get; set; }
+
+  Task OnAcceptSelected() => AcceptSelectedRequested.InvokeAsync();
+  Task OnAcceptVisible() => AcceptVisibleRequested.InvokeAsync();
+}
