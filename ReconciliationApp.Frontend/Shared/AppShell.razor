@@ -1,5 +1,4 @@
-@rendermode Microsoft.AspNetCore.Components.Web.RenderMode.InteractiveServer
-
+@using Microsoft.AspNetCore.Components.Web
 @using Microsoft.AspNetCore.Components.Routing
 @using ReconciliationApp.Frontend.State
 @inject NavigationManager Nav
@@ -8,7 +7,7 @@
 
 @if (Layout.IsSidebarOpen)
 {
-  <div class="overlay show" @onclick="Layout.CloseSidebar" aria-hidden="true"></div>
+  <div class="overlay @(Layout.IsSidebarOpen ? "show" : "")" @onclick="Layout.CloseSidebar" aria-hidden="true"></div>
 }
 
 <aside id="appSidebar"

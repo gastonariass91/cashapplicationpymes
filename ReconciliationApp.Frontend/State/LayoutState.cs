@@ -7,11 +7,11 @@ public sealed class LayoutState
     public event Action? OnChange;
 
     public void ToggleSidebar()
-    {
-        IsSidebarOpen = !IsSidebarOpen;
-        Console.WriteLine($"[LayoutState] ToggleSidebar -> {IsSidebarOpen}");
-        OnChange?.Invoke();
-    }
+{
+    IsSidebarOpen = !IsSidebarOpen;
+    Console.WriteLine($"[LayoutState] ToggleSidebar -> {IsSidebarOpen}");
+    OnChange?.Invoke();
+}
 
     public void CloseSidebar()
     {
