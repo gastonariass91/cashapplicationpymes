@@ -5,6 +5,13 @@ namespace ReconciliationApp.Frontend.State;
 
 public sealed class ReconciliationStore
 {
+    public event Action? OnChange;
+
+    private void Notify()
+    {
+        OnChange?.Invoke();
+    }
+
     private static readonly CultureInfo EsAr = CultureInfo.GetCultureInfo("es-AR");
 
     public ReconciliationView View { get; private set; } = ReconciliationView.Auto;
@@ -52,31 +59,43 @@ public sealed class ReconciliationStore
         DrawerOpen = false;
         Query = "";
         if (View != ReconciliationView.Auto) ConfFilter = "all";
+
+        Notify();
     }
 
     public void SetQuery(string q)
     {
         Query = q ?? "";
         Selected.Clear();
+
+        Notify();
     }
 
     public void SetConfFilter(string conf)
     {
         ConfFilter = conf;
         Selected.Clear();
+
+        Notify();
     }
 
     public void ToggleSelected(string key, bool on)
     {
         if (on) Selected.Add(key);
         else Selected.Remove(key);
+
+        Notify();
     }
 
     public void SelectAllVisible(bool on)
     {
         var keys = VisibleRows().Select(r => r.Key).ToList();
-        if (on) foreach (var k in keys) Selected.Add(k);
-        else foreach (var k in keys) Selected.Remove(k);
+        if (on)
+            foreach (var k in keys) Selected.Add(k);
+        else
+            foreach (var k in keys) Selected.Remove(k);
+
+        Notify();
     }
 
     public bool AllVisibleSelected()
@@ -96,12 +115,16 @@ public sealed class ReconciliationStore
     {
         SelectedKey = key;
         DrawerOpen = true;
+
+        Notify();
     }
 
     public void CloseDrawer()
     {
         DrawerOpen = false;
         SelectedKey = null;
+
+        Notify();
     }
 
     public void AcceptByKey(string key)
@@ -118,6 +141,8 @@ public sealed class ReconciliationStore
             Confidence = conf,
             Suggestion = "Aceptar"
         };
+
+        Notify();
     }
 
     public void ExceptionByKey(string key)
@@ -131,18 +156,24 @@ public sealed class ReconciliationStore
             Status = RowStatus.Exception,
             Suggestion = "Excepción"
         };
+
+        Notify();
     }
 
     public void AcceptSelected()
     {
         foreach (var k in Selected.ToList()) AcceptByKey(k);
         Selected.Clear();
+
+        Notify();
     }
 
     public void AcceptVisible()
     {
         foreach (var r in VisibleRows().ToList()) AcceptByKey(r.Key);
         Selected.Clear();
+
+        Notify();
     }
 
     public static string Money(decimal n)

@@ -2,6 +2,7 @@
 @using ReconciliationApp.Frontend.Models
 @using ReconciliationApp.Frontend.State
 @inject ReconciliationStore Store
+@implements IDisposable
 
 <PageTitle>Conciliación</PageTitle>
 
@@ -67,48 +68,56 @@
                       AcceptVisibleRequested="AcceptVisible" />
 
 @code {
+  protected override void OnInitialized()
+  {
+    Store.OnChange += HandleStoreChange;
+  }
+
+  void HandleStoreChange()
+  {
+    InvokeAsync(StateHasChanged);
+  }
+
+  public void Dispose()
+  {
+    Store.OnChange -= HandleStoreChange;
+  }
+
   void SetView(ReconciliationView v)
   {
     Store.SetView(v);
-    StateHasChanged();
   }
 
   void SetConfAll()
   {
     Store.SetConfFilter("all");
-    StateHasChanged();
   }
 
   void SetConfAlta()
   {
     Store.SetConfFilter("Alta");
-    StateHasChanged();
   }
 
   void SetConfAltaMedia()
   {
     Store.SetConfFilter("Alta+Media");
-    StateHasChanged();
   }
 
   Task OnQueryChanged(string query)
   {
     Store.SetQuery(query);
-    StateHasChanged();
     return Task.CompletedTask;
   }
 
   Task ToggleOne((string Key, bool On) args)
   {
     Store.ToggleSelected(args.Key, args.On);
-    StateHasChanged();
     return Task.CompletedTask;
   }
 
   Task ToggleAll(bool on)
   {
     Store.SelectAllVisible(on);
-    StateHasChanged();
     return Task.CompletedTask;
   }
 
@@ -116,35 +125,30 @@
   {
     Store.Selected.Clear();
     Store.CloseDrawer();
-    StateHasChanged();
     return Task.CompletedTask;
   }
 
   Task OpenDrawer(string key)
   {
     Store.OpenDrawer(key);
-    StateHasChanged();
     return Task.CompletedTask;
   }
 
   Task CloseDrawer()
   {
     Store.CloseDrawer();
-    StateHasChanged();
     return Task.CompletedTask;
   }
 
   Task AcceptSelected()
   {
     Store.AcceptSelected();
-    StateHasChanged();
     return Task.CompletedTask;
   }
 
   Task AcceptVisible()
   {
     Store.AcceptVisible();
-    StateHasChanged();
     return Task.CompletedTask;
   }
 
@@ -152,7 +156,6 @@
   {
     if (Store.SelectedKey is null) return Task.CompletedTask;
     Store.AcceptByKey(Store.SelectedKey);
-    StateHasChanged();
     return Task.CompletedTask;
   }
 
@@ -160,7 +163,6 @@
   {
     if (Store.SelectedKey is null) return Task.CompletedTask;
     Store.ExceptionByKey(Store.SelectedKey);
-    StateHasChanged();
     return Task.CompletedTask;
   }
 }
