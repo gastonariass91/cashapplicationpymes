@@ -2,16 +2,37 @@
 @using ReconciliationApp.Frontend.State
 
 <div class="footerBar">
-  <div class="footerInner">
-    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; color:var(--muted); font-size:12px;">
-      <span><b>Vista:</b> @ViewName()</span>
-      <span>·</span>
-      <span><b>Seleccionada:</b> @(Store.SelectedRow is null ? "—" : $"Deuda #{Store.SelectedRow.DebtRowNumber} ↔ Pago #{Store.SelectedRow.PaymentRowNumber}")</span>
-      <span>·</span>
-      <span><b>Estado run:</b> @(Store.CanConfirm ? "Listo para confirmar" : "Requiere resolución")</span>
+  <div class="footerInner reconFooter">
+    <div class="footerSummary refined">
+      <span class="footerChip pending">
+        Pendientes <b>@Store.PendingCount</b>
+      </span>
+
+      <span class="footerChip exception">
+        Excepciones <b>@Store.ExceptionCount</b>
+      </span>
+
+      <span class="footerChip auto">
+        Automáticos <b>@Store.AutoCount</b>
+      </span>
     </div>
 
     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <span class="small footerExplain">
+        @if (Store.CanConfirm)
+        {
+          <span>Todo resuelto. Ya podés confirmar la conciliación.</span>
+        }
+        else if (Store.PendingCount > 0)
+        {
+          <span>Confirmación bloqueada: hay pendientes por resolver.</span>
+        }
+        else
+        {
+          <span>Confirmación bloqueada: hay excepciones por revisar.</span>
+        }
+      </span>
+
       <button class="btn primary"
               disabled="@(Store.View!=ReconciliationView.Auto)"
               @onclick="OnAcceptVisible">
@@ -19,7 +40,8 @@
       </button>
 
       <button class="btn primary"
-              disabled="@(!Store.CanConfirm)">
+              disabled="@(!Store.CanConfirm)"
+              title="@(Store.CanConfirm ? "Confirmar conciliación" : "Resolvé pendientes o excepciones antes de confirmar")">
         Confirmar conciliación
       </button>
     </div>
@@ -29,14 +51,6 @@
 @code {
   [Parameter, EditorRequired] public ReconciliationStore Store { get; set; } = default!;
   [Parameter] public EventCallback AcceptVisibleRequested { get; set; }
-
-  string ViewName()
-    => Store.View switch
-    {
-      ReconciliationView.Auto => "Automáticas",
-      ReconciliationView.Pending => "Pendientes",
-      _ => "Excepciones"
-    };
 
   Task OnAcceptVisible() => AcceptVisibleRequested.InvokeAsync();
 }

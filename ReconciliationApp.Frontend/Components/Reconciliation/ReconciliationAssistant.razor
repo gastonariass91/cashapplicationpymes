@@ -1,47 +1,61 @@
 @using ReconciliationApp.Frontend.Models
 @using ReconciliationApp.Frontend.State
 
-<div class="side card">
+<div class="card assistant">
   <div class="panelHead">
-    <div style="display:flex; flex-direction:column; gap:2px;">
-      <b>Asistente</b>
-      <span>Acción guiada (bulk)</span>
+    <div class="assistantHeaderText">
+      <b>Resumen de vista</b>
+      <span>Información contextual de la conciliación</span>
     </div>
   </div>
 
-  <div class="box">
-    <p class="sectionTitle">Aceptación en bloque</p>
-    <div class="callout" style="margin-bottom:10px;">
-      <b>Recomendación:</b> aceptá <span class="mono">Alta</span> y (opcional) <span class="mono">Media</span>.
+  <div class="assistantBody">
+    <div class="assistantStats">
+      <div class="statBox">
+        <div class="statLabel">Seleccionadas</div>
+        <div class="statValue">@Store.Selected.Count</div>
+      </div>
+
+      <div class="statBox">
+        <div class="statLabel">Visibles</div>
+        <div class="statValue">@Store.VisibleRows().Count()</div>
+      </div>
+
+      <div class="statBox">
+        <div class="statLabel">Automáticos</div>
+        <div class="statValue">@Store.AutoCount</div>
+      </div>
     </div>
 
-    <div class="kv">
-      <div class="k">Seleccionadas</div><div><b>@Store.Selected.Count</b></div>
-      <div class="k">Visibles (filtro)</div><div><b>@Store.VisibleRows().Count()</b></div>
-      <div class="k">Auto totales</div><div><b>@Store.AutoCount</b></div>
-    </div>
+    <div class="assistantAdvice">
+      <div class="assistantHint">
+        <b>Recomendación</b>
+        <div class="assistantText">
+          Empezá por coincidencias de <b>Alta confianza</b>. Luego revisá coincidencias de <b>Media</b> si el caso es evidente.
+        </div>
+      </div>
 
-    <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
-      <button class="btn primary"
-              disabled="@(Store.Selected.Count==0 || Store.View!=ReconciliationView.Auto)"
-              @onclick="OnAcceptSelected">
-        Aceptar seleccionadas
-      </button>
-
-      <button class="btn"
-              disabled="@(Store.View!=ReconciliationView.Auto || !Store.VisibleRows().Any())"
-              @onclick="OnAcceptVisible">
-        Aceptar visibles
-      </button>
+      <div class="assistantNext compactNext">
+        <b>Próximo paso</b>
+        <div class="assistantText">
+          @if (Store.PendingCount > 0)
+          {
+            <span>Pendientes por revisar.</span>
+          }
+          else if (Store.ExceptionCount > 0)
+          {
+            <span>Excepciones por resolver.</span>
+          }
+          else
+          {
+            <span>Listo para confirmar.</span>
+          }
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 @code {
   [Parameter, EditorRequired] public ReconciliationStore Store { get; set; } = default!;
-  [Parameter] public EventCallback AcceptSelectedRequested { get; set; }
-  [Parameter] public EventCallback AcceptVisibleRequested { get; set; }
-
-  Task OnAcceptSelected() => AcceptSelectedRequested.InvokeAsync();
-  Task OnAcceptVisible() => AcceptVisibleRequested.InvokeAsync();
 }

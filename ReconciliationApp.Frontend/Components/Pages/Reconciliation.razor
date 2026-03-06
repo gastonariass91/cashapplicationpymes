@@ -1,12 +1,89 @@
 @page "/reconciliation"
+@using Microsoft.JSInterop
 @using ReconciliationApp.Frontend.Models
 @using ReconciliationApp.Frontend.State
 @inject ReconciliationStore Store
+@inject IJSRuntime JS
 @implements IDisposable
 
 <PageTitle>Conciliación</PageTitle>
 
-<div class="kpis">
+<div class="runProgress card">
+  <div class="runProgressTop">
+    <div>
+      <div class="runProgressTitle">Progreso de conciliación</div>
+      <div class="runProgressSub">@ResolvedCount de @Store.Rows.Count casos resueltos</div>
+    </div>
+
+    <div class="runProgressActions">
+      <span class="small">Hotkeys: 1 · 2 · 3 · A · X · V · Esc · Ctrl/Cmd+K</span>
+    </div>
+  </div>
+
+  <div class="progressBar">
+    <div class="progressBarFill" style="width:@($"{RunProgressPct}%")"></div>
+  </div>
+
+  <div class="runProgressMeta">
+    <span>Resueltos <b>@ResolvedCount</b></span>
+    <span>Automáticos <b>@Store.AutoCount</b></span>
+    <span>Pendientes <b>@Store.PendingCount</b></span>
+    <span>Excepciones <b>@Store.ExceptionCount</b></span>
+  </div>
+</div>
+
+@if (CommandPaletteOpen)
+{
+  <div class="commandOverlay" @onclick="ClosePalette"></div>
+
+  <div class="commandPalette card" role="dialog" aria-label="Acciones rápidas">
+    <div class="commandHead">
+      <b>Acciones rápidas</b>
+      <button class="iconBtn" title="Cerrar" @onclick="ClosePalette">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="commandBody">
+      <button class="commandItem" @onclick="PaletteViewAuto">
+        <span class="commandTitle">Ir a Automáticas</span>
+        <span class="commandHint">1</span>
+      </button>
+
+      <button class="commandItem" @onclick="PaletteViewPending">
+        <span class="commandTitle">Ir a Pendientes</span>
+        <span class="commandHint">2</span>
+      </button>
+
+      <button class="commandItem" @onclick="PaletteViewExceptions">
+        <span class="commandTitle">Ir a Excepciones</span>
+        <span class="commandHint">3</span>
+      </button>
+
+      <button class="commandItem" @onclick="PaletteAcceptVisible">
+        <span class="commandTitle">Aceptar visibles</span>
+        <span class="commandHint">V</span>
+      </button>
+
+      <button class="commandItem" @onclick="PaletteAcceptCurrent">
+        <span class="commandTitle">Aceptar caso abierto</span>
+        <span class="commandHint">A</span>
+      </button>
+
+      <button class="commandItem" @onclick="PaletteExceptionCurrent">
+        <span class="commandTitle">Marcar excepción del caso abierto</span>
+        <span class="commandHint">X</span>
+      </button>
+
+      <button class="commandItem" @onclick="PaletteFocusSearch">
+        <span class="commandTitle">Ir al buscador</span>
+        <span class="commandHint">F</span>
+      </button>
+    </div>
+  </div>
+}
+
+<div class="kpis compact">
   <div class="card kpi">
     <div class="label">Deudas <span class="mini">@($"{Store.DebtsRowsTotal} filas")</span></div>
     <div class="value">@ReconciliationStore.Money(Store.DebtsAmtTotal)</div>
@@ -30,9 +107,9 @@
 </div>
 
 <div class="tabs">
-  <button class="tab @(Store.View==ReconciliationView.Auto?"active":"")" @onclick="() => SetView(ReconciliationView.Auto)">Automáticas</button>
-  <button class="tab @(Store.View==ReconciliationView.Pending?"active":"")" @onclick="() => SetView(ReconciliationView.Pending)">Pendientes</button>
-  <button class="tab @(Store.View==ReconciliationView.Exceptions?"active":"")" @onclick="() => SetView(ReconciliationView.Exceptions)">Excepciones</button>
+  <button class="tab @(Store.View==ReconciliationView.Auto?"active":"")" @onclick="() => SetView(ReconciliationView.Auto)">Automáticas (@Store.AutoCount)</button>
+  <button class="tab @(Store.View==ReconciliationView.Pending?"active":"")" @onclick="() => SetView(ReconciliationView.Pending)">Pendientes (@Store.PendingCount)</button>
+  <button class="tab @(Store.View==ReconciliationView.Exceptions?"active":"")" @onclick="() => SetView(ReconciliationView.Exceptions)">Excepciones (@Store.ExceptionCount)</button>
 
   @if (Store.View == ReconciliationView.Auto)
   {
@@ -42,8 +119,6 @@
       <div class="pill @(Store.ConfFilter=="Alta+Media"?"active":"")" @onclick="SetConfAltaMedia">Alta+Media</div>
     </div>
   }
-
-  <div class="tip">Tip: aceptá Automáticas (Alta/Media) y pasá a Pendientes.</div>
 </div>
 
 <div class="layout">
@@ -54,9 +129,7 @@
                        ToggleOneRequested="ToggleOne"
                        OpenDrawerRequested="OpenDrawer" />
 
-  <ReconciliationAssistant Store="Store"
-                           AcceptSelectedRequested="AcceptSelected"
-                           AcceptVisibleRequested="AcceptVisible" />
+  <ReconciliationAssistant Store="Store" />
 </div>
 
 <ReconciliationDrawer Store="Store"
@@ -68,9 +141,24 @@
                       AcceptVisibleRequested="AcceptVisible" />
 
 @code {
+  private DotNetObjectReference<Reconciliation>? _objRef;
+  private bool CommandPaletteOpen;
+
+  int ResolvedCount => Store.AutoCount + Store.ExceptionCount;
+  int RunProgressPct => Store.Rows.Count == 0 ? 0 : (int)Math.Round((double)ResolvedCount / Store.Rows.Count * 100);
+
   protected override void OnInitialized()
   {
     Store.OnChange += HandleStoreChange;
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+    {
+      _objRef = DotNetObjectReference.Create(this);
+      await JS.InvokeVoidAsync("reconciliationHotkeys.register", _objRef);
+    }
   }
 
   void HandleStoreChange()
@@ -81,27 +169,71 @@
   public void Dispose()
   {
     Store.OnChange -= HandleStoreChange;
+    _ = JS.InvokeVoidAsync("reconciliationHotkeys.unregister");
+    _objRef?.Dispose();
   }
 
-  void SetView(ReconciliationView v)
+  [JSInvokable]
+  public async Task HandleHotkey(string action)
   {
-    Store.SetView(v);
+    switch (action)
+    {
+      case "togglePalette":
+        CommandPaletteOpen = !CommandPaletteOpen;
+        break;
+      case "closeContext":
+        if (CommandPaletteOpen) CommandPaletteOpen = false;
+        else if (Store.DrawerOpen) Store.CloseDrawer();
+        break;
+      case "viewAuto":
+        Store.SetView(ReconciliationView.Auto);
+        CommandPaletteOpen = false;
+        break;
+      case "viewPending":
+        Store.SetView(ReconciliationView.Pending);
+        CommandPaletteOpen = false;
+        break;
+      case "viewExceptions":
+        Store.SetView(ReconciliationView.Exceptions);
+        CommandPaletteOpen = false;
+        break;
+      case "acceptVisible":
+        if (Store.View == ReconciliationView.Auto && Store.VisibleRows().Any())
+          Store.AcceptVisible();
+        CommandPaletteOpen = false;
+        break;
+      case "acceptCurrent":
+        if (Store.SelectedKey is not null)
+          Store.AcceptByKey(Store.SelectedKey);
+        CommandPaletteOpen = false;
+        break;
+      case "exceptionCurrent":
+        if (Store.SelectedKey is not null)
+          Store.ExceptionByKey(Store.SelectedKey);
+        CommandPaletteOpen = false;
+        break;
+      case "focusSearch":
+        CommandPaletteOpen = false;
+        await JS.InvokeVoidAsync("reconciliationHotkeys.focusSelector", ".reconcTable .search input");
+        break;
+    }
+
+    await InvokeAsync(StateHasChanged);
   }
 
-  void SetConfAll()
-  {
-    Store.SetConfFilter("all");
-  }
+  void ClosePalette() => CommandPaletteOpen = false;
+  Task PaletteViewAuto() => HandleHotkey("viewAuto");
+  Task PaletteViewPending() => HandleHotkey("viewPending");
+  Task PaletteViewExceptions() => HandleHotkey("viewExceptions");
+  Task PaletteAcceptVisible() => HandleHotkey("acceptVisible");
+  Task PaletteAcceptCurrent() => HandleHotkey("acceptCurrent");
+  Task PaletteExceptionCurrent() => HandleHotkey("exceptionCurrent");
+  Task PaletteFocusSearch() => HandleHotkey("focusSearch");
 
-  void SetConfAlta()
-  {
-    Store.SetConfFilter("Alta");
-  }
-
-  void SetConfAltaMedia()
-  {
-    Store.SetConfFilter("Alta+Media");
-  }
+  void SetView(ReconciliationView v) => Store.SetView(v);
+  void SetConfAll() => Store.SetConfFilter("all");
+  void SetConfAlta() => Store.SetConfFilter("Alta");
+  void SetConfAltaMedia() => Store.SetConfFilter("Alta+Media");
 
   Task OnQueryChanged(string query)
   {
@@ -137,12 +269,6 @@
   Task CloseDrawer()
   {
     Store.CloseDrawer();
-    return Task.CompletedTask;
-  }
-
-  Task AcceptSelected()
-  {
-    Store.AcceptSelected();
     return Task.CompletedTask;
   }
 

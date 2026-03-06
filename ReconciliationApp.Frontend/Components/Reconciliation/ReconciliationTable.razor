@@ -9,15 +9,15 @@
     </div>
     <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
       <div class="search">
-        <span style="color:var(--muted)">🔎</span>
-        <input value="@Store.Query" @oninput="OnQueryInput" placeholder="Buscar por cliente, monto, regla, tipo…" />
+        <span class="searchIcon" style="color:var(--muted)">🔎</span>
+        <input value="@Store.Query" @oninput="OnQueryInput" placeholder="Buscar por cliente, regla, monto o evidencia…" />
         <span class="hint mono">⌘K</span>
       </div>
-      <button class="btn" @onclick="OnClearSelection">Limpiar</button>
+      <button class="btn ghostBtn" @onclick="OnClearSelection">Limpiar</button>
     </div>
   </div>
 
-  <table class="table">
+  <table class="table reconcTable">
     <thead>
       <tr>
         <th class="sel" style="@(Store.View==ReconciliationView.Auto ? "" : "visibility:hidden")" title="Seleccionar todo visible">
@@ -27,10 +27,11 @@
                    @onchange="OnToggleAll" />
           </span>
         </th>
-        <th>Riesgo</th>
-        <th>Caso</th>
+        <th>Tipo</th>
         <th>Cliente</th>
-        <th>Monto / Δ</th>
+        <th>Deuda</th>
+        <th>Pago</th>
+        <th title="Diferencia entre deuda y pago">Δ</th>
         <th>Sugerencia</th>
         <th>Estado</th>
       </tr>
@@ -50,24 +51,36 @@
               </span>
             }
           </td>
-          <td>@(RiskCell(r))</td>
+
           <td>
-            <div style="display:flex; align-items:center; gap:10px;">
+            <div class="caseCell">
               <span class="typeBadge" title="@ReconciliationUi.TypeLabel(r.Type)">@ReconciliationUi.TypeIcon(r.Type)</span>
-              <div style="display:flex; flex-direction:column; min-width:0;">
-                <b class="mono">#@r.DebtRowNumber ↔ #@r.PaymentRowNumber</b>
-                <span class="cellSub">@ReconciliationUi.TypeLabel(r.Type) · @r.Rule</span>
+              <div class="caseMeta">
+                <b>@ReconciliationUi.TypeLabel(r.Type)</b>
+                <span class="cellSub mono">#@r.DebtRowNumber ↔ #@r.PaymentRowNumber</span>
               </div>
             </div>
           </td>
+
           <td>
             <b>@r.Customer</b>
-            <span class="cellSub">@r.Evidence</span>
+            <span class="cellSub">@r.Rule</span>
           </td>
+
           <td>
             <b>@ReconciliationStore.Money(r.DebtAmount)</b>
-            <span class="cellSub">Pago @ReconciliationStore.Money(r.PaymentAmount) · Δ <span class="delta @ReconciliationUi.DeltaClass(r.Delta) mono">@ReconciliationUi.DeltaText(r.Delta)</span></span>
+            <span class="cellSub">Deuda</span>
           </td>
+
+          <td>
+            <b>@ReconciliationStore.Money(r.PaymentAmount)</b>
+            <span class="cellSub">Pago</span>
+          </td>
+
+          <td>
+            <span class="delta @ReconciliationUi.DeltaClass(r.Delta) mono">@ReconciliationStore.Money(r.Delta)</span>
+          </td>
+
           <td>@(SuggestionChip(r))</td>
           <td>@(StatusChip(r.Status))</td>
         </tr>
@@ -109,34 +122,18 @@
   string TableTitle()
     => Store.View switch
     {
-      ReconciliationView.Auto => "Automáticas · operable",
-      ReconciliationView.Pending => "Pendientes · revisión",
-      _ => "Excepciones · decisión"
+      ReconciliationView.Auto => "Automáticas · lista para operar",
+      ReconciliationView.Pending => "Pendientes · revisión manual",
+      _ => "Excepciones · casos observados"
     };
 
   string TableSubtitle()
     => Store.View switch
     {
-      ReconciliationView.Auto => "Seleccioná y aceptá en bloque. Click en fila para resolver en drawer.",
+      ReconciliationView.Auto => "Aceptá rápido los matches correctos y abrí el detalle cuando tengas dudas.",
       ReconciliationView.Pending => "Casos que requieren criterio humano.",
-      _ => "Casos observados o descartados."
+      _ => "Casos descartados o marcados como excepción."
     };
-
-  RenderFragment RiskCell(ReconciliationRow r) => __builder =>
-  {
-    var text = r.Confidence.ToString();
-    var cls = r.Confidence switch
-    {
-      Confidence.Alta => "chip good",
-      Confidence.Media => "chip warn",
-      _ => "chip bad"
-    };
-
-    __builder.OpenElement(0, "span");
-    __builder.AddAttribute(1, "class", cls);
-    __builder.AddContent(2, text);
-    __builder.CloseElement();
-  };
 
   RenderFragment SuggestionChip(ReconciliationRow r) => __builder =>
   {
@@ -159,9 +156,16 @@
       _ => "chip bad"
     };
 
+    var label = status switch
+    {
+      RowStatus.Ok => "Ok",
+      RowStatus.Pending => "Pendiente",
+      _ => "Excepción"
+    };
+
     __builder.OpenElement(0, "span");
     __builder.AddAttribute(1, "class", cls);
-    __builder.AddContent(2, status.ToString());
+    __builder.AddContent(2, label);
     __builder.CloseElement();
   };
 }
