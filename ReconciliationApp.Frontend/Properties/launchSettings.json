@@ -9,6 +9,16 @@
       }
     },
     "profiles": {
+    "codespaces": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "applicationUrl": "http://0.0.0.0:8080",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "DOTNET_WATCH_SUPPRESS_BROWSER_REFRESH": "true"
+      }
+    },
       "http": {
         "commandName": "Project",
         "dotnetRunMessages": true,

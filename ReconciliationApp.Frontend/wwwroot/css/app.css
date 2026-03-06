@@ -80,7 +80,7 @@ body{
 .overlay{
   position:fixed; inset:0;
   background: rgba(0,0,0,.55);
-  z-index: 40;
+  z-index: 10;
   opacity:0; pointer-events:none;
   transition:.18s ease;
 }
@@ -159,8 +159,15 @@ body{
 .userMeta span{font-size:11px; color:var(--muted)}
 
 .header{
-  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
   padding:10px 12px;
+
+  position: relative;
+  z-index: 200;
 }
 .header.card{background: rgba(15,23,42,.78)}
 .hLeft{display:flex; align-items:center; gap:10px; min-width:0}

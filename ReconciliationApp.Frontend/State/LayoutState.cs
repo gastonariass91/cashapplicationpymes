@@ -3,6 +3,7 @@ namespace ReconciliationApp.Frontend.State;
 public sealed class LayoutState
 {
     public bool IsSidebarOpen { get; private set; } = false;
+
     public event Action? OnChange;
 
     public void ToggleSidebar()
