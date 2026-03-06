@@ -1,13 +1,30 @@
 @page "/reconciliation"
 @using Microsoft.JSInterop
 @using ReconciliationApp.Frontend.Models
+@using ReconciliationApp.Frontend.Services
 @using ReconciliationApp.Frontend.State
 @inject ReconciliationStore Store
+@inject ReconciliationApiClient ApiClient
 @inject IJSRuntime JS
 @implements IDisposable
 
 <PageTitle>Conciliación</PageTitle>
 
+@if (!Store.IsLoaded && string.IsNullOrWhiteSpace(Store.LoadError))
+{
+  <div class="card" style="padding:24px; margin-top:16px;">
+    <b>Cargando conciliación…</b>
+  </div>
+}
+else if (!string.IsNullOrWhiteSpace(Store.LoadError))
+{
+  <div class="card" style="padding:24px; margin-top:16px; border:1px solid rgba(239,68,68,.30);">
+    <b>Error al cargar conciliación</b>
+    <div style="margin-top:8px; color:var(--muted);">@Store.LoadError</div>
+  </div>
+}
+else
+{
 <div class="runProgress card">
   <div class="runProgressTop">
     <div>
@@ -139,17 +156,35 @@
 
 <ReconciliationFooter Store="Store"
                       AcceptVisibleRequested="AcceptVisible" />
+}
 
 @code {
   private DotNetObjectReference<Reconciliation>? _objRef;
   private bool CommandPaletteOpen;
+  private const string RunId = "run-2026-03-0002";
 
   int ResolvedCount => Store.AutoCount + Store.ExceptionCount;
   int RunProgressPct => Store.Rows.Count == 0 ? 0 : (int)Math.Round((double)ResolvedCount / Store.Rows.Count * 100);
 
-  protected override void OnInitialized()
+  protected override async Task OnInitializedAsync()
   {
     Store.OnChange += HandleStoreChange;
+
+    try
+    {
+      var dto = await ApiClient.GetRunAsync(RunId);
+      if (dto is null)
+      {
+        Store.SetLoadError("La API devolvió una respuesta vacía.");
+        return;
+      }
+
+      Store.LoadFromApi(dto);
+    }
+    catch (Exception ex)
+    {
+      Store.SetLoadError(ex.Message);
+    }
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
