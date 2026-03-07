@@ -169,7 +169,20 @@ else
   protected override async Task OnInitializedAsync()
   {
     Store.OnChange += HandleStoreChange;
+    await ReloadRunAsync();
+  }
 
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+    {
+      _objRef = DotNetObjectReference.Create(this);
+      await JS.InvokeVoidAsync("reconciliationHotkeys.register", _objRef);
+    }
+  }
+
+  async Task ReloadRunAsync()
+  {
     try
     {
       var dto = await ApiClient.GetRunAsync(RunId);
@@ -184,15 +197,6 @@ else
     catch (Exception ex)
     {
       Store.SetLoadError(ex.Message);
-    }
-  }
-
-  protected override async Task OnAfterRenderAsync(bool firstRender)
-  {
-    if (firstRender)
-    {
-      _objRef = DotNetObjectReference.Create(this);
-      await JS.InvokeVoidAsync("reconciliationHotkeys.register", _objRef);
     }
   }
 
@@ -234,17 +238,17 @@ else
         break;
       case "acceptVisible":
         if (Store.View == ReconciliationView.Auto && Store.VisibleRows().Any())
-          Store.AcceptVisible();
+          await AcceptVisible();
         CommandPaletteOpen = false;
         break;
       case "acceptCurrent":
         if (Store.SelectedKey is not null)
-          Store.AcceptByKey(Store.SelectedKey);
+          await AcceptOne();
         CommandPaletteOpen = false;
         break;
       case "exceptionCurrent":
         if (Store.SelectedKey is not null)
-          Store.ExceptionByKey(Store.SelectedKey);
+          await MarkException();
         CommandPaletteOpen = false;
         break;
       case "focusSearch":
@@ -307,23 +311,36 @@ else
     return Task.CompletedTask;
   }
 
-  Task AcceptVisible()
+  async Task AcceptVisible()
   {
-    Store.AcceptVisible();
-    return Task.CompletedTask;
+    var ids = Store.VisibleRows().Select(x => x.Key).ToList();
+    if (ids.Count == 0) return;
+
+    var ok = await ApiClient.BulkAcceptAsync(RunId, ids);
+    if (ok) await ReloadRunAsync();
   }
 
-  Task AcceptOne()
+  async Task AcceptOne()
   {
-    if (Store.SelectedKey is null) return Task.CompletedTask;
-    Store.AcceptByKey(Store.SelectedKey);
-    return Task.CompletedTask;
+    if (Store.SelectedKey is null) return;
+
+    var ok = await ApiClient.AcceptCaseAsync(RunId, Store.SelectedKey);
+    if (ok)
+    {
+      await ReloadRunAsync();
+      Store.CloseDrawer();
+    }
   }
 
-  Task MarkException()
+  async Task MarkException()
   {
-    if (Store.SelectedKey is null) return Task.CompletedTask;
-    Store.ExceptionByKey(Store.SelectedKey);
-    return Task.CompletedTask;
+    if (Store.SelectedKey is null) return;
+
+    var ok = await ApiClient.MarkExceptionAsync(RunId, Store.SelectedKey);
+    if (ok)
+    {
+      await ReloadRunAsync();
+      Store.CloseDrawer();
+    }
   }
 }

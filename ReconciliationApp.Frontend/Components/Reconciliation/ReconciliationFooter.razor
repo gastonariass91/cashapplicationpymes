@@ -41,7 +41,8 @@
 
       <button class="btn primary"
               disabled="@(!Store.CanConfirm)"
-              title="@(Store.CanConfirm ? "Confirmar conciliación" : "Resolvé pendientes o excepciones antes de confirmar")">
+              title="@(Store.CanConfirm ? "Confirmar conciliación" : "Resolvé pendientes o excepciones antes de confirmar")"
+              @onclick="OnConfirm">
         Confirmar conciliación
       </button>
     </div>
@@ -51,6 +52,8 @@
 @code {
   [Parameter, EditorRequired] public ReconciliationStore Store { get; set; } = default!;
   [Parameter] public EventCallback AcceptVisibleRequested { get; set; }
+  [Parameter] public EventCallback ConfirmRequested { get; set; }
 
   Task OnAcceptVisible() => AcceptVisibleRequested.InvokeAsync();
+  Task OnConfirm() => ConfirmRequested.InvokeAsync();
 }
