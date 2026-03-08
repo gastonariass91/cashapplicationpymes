@@ -1,0 +1,1929 @@
+/* reconciliation.css */
+
+/* =========================
+   THEME
+   ========================= */
+   :root{
+     --bg:#0a0f1f;
+       --surface:#0f172a;
+         --surface2:#0b1324;
+           --surface3:#0c162b;
+             --text:#e6edf7;
+               --muted:#94a3b8;
+                 --line:rgba(255,255,255,.08);
+                   --primary:#3b82f6;
+                     --primary2:#2563eb;
+                       --good:#22c55e;
+                         --warn:#f59e0b;
+                           --bad:#ef4444;
+                             --shadow: 0 14px 40px rgba(0,0,0,.45);
+                               --shadow2: 0 20px 60px rgba(0,0,0,.55);
+                                 --radius:16px;
+                                   --radius2:22px;
+                                     --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+                                       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+                                         --focus: 0 0 0 3px rgba(59,130,246,.25);
+                                         }
+
+                                         /* =========================
+                                            BASE
+                                            ========================= */
+                                            *{box-sizing:border-box}
+                                            html,body{height:100%}
+                                            body{
+                                              margin:0;
+                                                font-family:var(--sans);
+                                                  color:var(--text);
+                                                    background:
+                                                        radial-gradient(1100px 520px at 12% 0%, rgba(59,130,246,.20), transparent 60%),
+                                                            radial-gradient(900px 500px at 85% 12%, rgba(34,197,94,.10), transparent 55%),
+                                                                radial-gradient(900px 700px at 55% 85%, rgba(245,158,11,.10), transparent 55%),
+                                                                    var(--bg);
+                                                                    }
+                                                                    a{color:inherit}
+                                                                    button{font-family:inherit}
+                                                                    .mono{font-family:var(--mono)}
+                                                                    .small{font-size:12px;color:var(--muted)}
+                                                                    hr.sep{border:0;border-top:1px solid var(--line);margin:12px 0}
+
+                                                                    /* =========================
+                                                                       ICONS / BUTTONS
+                                                                       ========================= */
+                                                                       .icon{
+                                                                         width:18px;height:18px;
+                                                                           fill:none;stroke:currentColor;stroke-width:2;
+                                                                             stroke-linecap:round;stroke-linejoin:round
+                                                                             }
+                                                                             .iconBtn{
+                                                                               width:34px;height:34px;border-radius:12px;border:1px solid var(--line);
+                                                                                 background: rgba(255,255,255,.03);color:var(--text);
+                                                                                   display:grid;place-items:center;cursor:pointer;transition:.14s ease;user-select:none;
+                                                                                   }
+                                                                                   .iconBtn:hover{
+                                                                                     transform: translateY(-1px);
+                                                                                       border-color: rgba(59,130,246,.35);
+                                                                                         background: rgba(59,130,246,.10)
+                                                                                         }
+                                                                                         .iconBtn:focus{outline:none; box-shadow:var(--focus)}
+                                                                                         .btn{
+                                                                                           border:1px solid rgba(255,255,255,.10);
+                                                                                             background: rgba(255,255,255,.04);
+                                                                                               color:var(--text);
+                                                                                                 padding:9px 12px;border-radius:999px;
+                                                                                                   font-size:12px;font-weight:900;cursor:pointer;transition:.14s ease;
+                                                                                                   }
+                                                                                                   .btn:hover{
+                                                                                                     transform: translateY(-1px);
+                                                                                                       border-color: rgba(59,130,246,.35);
+                                                                                                         background: rgba(59,130,246,.10)
+                                                                                                         }
+                                                                                                         .btn:focus{outline:none; box-shadow:var(--focus)}
+                                                                                                         .btn.primary{
+                                                                                                           border:1px solid rgba(59,130,246,.35);
+                                                                                                             background: linear-gradient(135deg, rgba(59,130,246,.95), rgba(37,99,235,.65));
+                                                                                                             }
+                                                                                                             .btn.primary:hover{
+                                                                                                               background: linear-gradient(135deg, rgba(59,130,246,1), rgba(37,99,235,.78));
+                                                                                                               }
+                                                                                                               .btn.danger{border-color: rgba(239,68,68,.30);background: rgba(239,68,68,.08);}
+                                                                                                               .btn.danger:hover{border-color: rgba(239,68,68,.45); background: rgba(239,68,68,.12)}
+                                                                                                               .btn:disabled{opacity:.45; cursor:not-allowed; transform:none}
+
+                                                                                                               /* Fix: tabs/botones siempre con color */
+                                                                                                               .tab, .pill, .btn, .iconBtn{ color:var(--text); }
+
+                                                                                                               /* =========================
+                                                                                                                  BADGES / CHIPS
+                                                                                                                  ========================= */
+                                                                                                                  .badge{
+                                                                                                                    display:inline-flex; align-items:center; gap:8px;
+                                                                                                                      padding:7px 10px;border-radius:999px;
+                                                                                                                        border:1px solid rgba(255,255,255,.10);
+                                                                                                                          background: rgba(255,255,255,.03);
+                                                                                                                            font-size:11px; color:var(--muted);
+                                                                                                                            }
+                                                                                                                            .dot{width:8px;height:8px;border-radius:50%}
+                                                                                                                            .dot.good{background:var(--good)}
+                                                                                                                            .dot.warn{background:var(--warn)}
+                                                                                                                            .dot.bad{background:var(--bad)}
+
+                                                                                                                            .chip{
+                                                                                                                              display:inline-flex; align-items:center; gap:6px;
+                                                                                                                                padding:4px 9px;border-radius:999px;
+                                                                                                                                  font-size:11px;border:1px solid rgba(255,255,255,.10);
+                                                                                                                                    white-space:nowrap;
+                                                                                                                                    }
+                                                                                                                                    .chip.good{background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.22); color: rgba(187,255,212,.98)}
+                                                                                                                                    .chip.warn{background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.22); color: rgba(255,232,191,.98)}
+                                                                                                                                    .chip.bad{background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.22); color: rgba(255,203,203,.98)}
+                                                                                                                                    .chip.neutral{background: rgba(255,255,255,.03); border-color: rgba(255,255,255,.10); color: rgba(230,237,247,.92)}
+
+                                                                                                                                    /* =========================
+                                                                                                                                       CARDS / LAYOUT
+                                                                                                                                       ========================= */
+                                                                                                                                       .card{
+                                                                                                                                         border:1px solid rgba(255,255,255,.08);
+                                                                                                                                           background: rgba(15,23,42,.70);
+                                                                                                                                             backdrop-filter: blur(10px);
+                                                                                                                                               border-radius: var(--radius2);
+                                                                                                                                                 box-shadow: var(--shadow);
+                                                                                                                                                 }
+                                                                                                                                                 .app{min-height:100vh}
+                                                                                                                                                 .main{padding:16px 18px 120px}
+                                                                                                                                                 .wrap{max-width:1280px;margin:0 auto}
+
+                                                                                                                                                 .kpis{
+                                                                                                                                                   margin-top:12px;
+                                                                                                                                                     display:grid;
+                                                                                                                                                       grid-template-columns: repeat(5, 1fr);
+                                                                                                                                                         gap:10px;
+                                                                                                                                                         }
+                                                                                                                                                         .kpi{padding:12px}
+                                                                                                                                                         .kpi .label{
+                                                                                                                                                           font-size:11px; color:var(--muted);
+                                                                                                                                                             display:flex; justify-content:space-between; align-items:center
+                                                                                                                                                             }
+                                                                                                                                                             .kpi .value{margin-top:6px; font-size:18px; font-weight:950; letter-spacing:.2px}
+                                                                                                                                                             .kpi .mini{
+                                                                                                                                                               padding:4px 8px; border-radius:999px;
+                                                                                                                                                                 border:1px solid rgba(255,255,255,.10);
+                                                                                                                                                                   background: rgba(255,255,255,.03);
+                                                                                                                                                                     font-size:11px; color:var(--muted);
+                                                                                                                                                                     }
+
+                                                                                                                                                                     .tabs{
+                                                                                                                                                                       margin-top:12px;
+                                                                                                                                                                         display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+                                                                                                                                                                         }
+                                                                                                                                                                         .tab{
+                                                                                                                                                                           position:relative;
+                                                                                                                                                                             padding:9px 12px;border-radius:999px;
+                                                                                                                                                                               border:1px solid rgba(255,255,255,.10);
+                                                                                                                                                                                 background: rgba(255,255,255,.03);
+                                                                                                                                                                                   font-size:12px; font-weight:950;
+                                                                                                                                                                                     cursor:pointer;transition:.14s ease;
+                                                                                                                                                                                     }
+                                                                                                                                                                                     .tab:hover{border-color: rgba(255,255,255,.16)}
+                                                                                                                                                                                     .tab.active{background: rgba(59,130,246,.16);border-color: rgba(59,130,246,.30);}
+                                                                                                                                                                                     .tab.active:after{
+                                                                                                                                                                                       content:"";
+                                                                                                                                                                                         position:absolute; left:14px; right:14px; bottom:-6px;
+                                                                                                                                                                                           height:2px; border-radius:999px;
+                                                                                                                                                                                             background: rgba(59,130,246,.90);
+                                                                                                                                                                                               box-shadow: 0 12px 18px rgba(59,130,246,.20);
+                                                                                                                                                                                               }
+
+                                                                                                                                                                                               .pills{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-left:auto}
+                                                                                                                                                                                               .pill{
+                                                                                                                                                                                                 padding:7px 10px;border-radius:999px;
+                                                                                                                                                                                                   border:1px solid rgba(255,255,255,.10);
+                                                                                                                                                                                                     background: rgba(255,255,255,.03);
+                                                                                                                                                                                                       font-size:12px;color:var(--muted);
+                                                                                                                                                                                                         cursor:pointer;transition:.14s ease;user-select:none;
+                                                                                                                                                                                                         }
+                                                                                                                                                                                                         .pill:hover{border-color: rgba(255,255,255,.16)}
+                                                                                                                                                                                                         .pill.active{
+                                                                                                                                                                                                           color: var(--text);
+                                                                                                                                                                                                             background: rgba(34,197,94,.10);
+                                                                                                                                                                                                               border-color: rgba(34,197,94,.20);
+                                                                                                                                                                                                               }
+
+                                                                                                                                                                                                               .tip{
+                                                                                                                                                                                                                 color:var(--muted);
+                                                                                                                                                                                                                   font-size:12px;
+                                                                                                                                                                                                                     padding:8px 10px;
+                                                                                                                                                                                                                       border:1px solid rgba(255,255,255,.10);
+                                                                                                                                                                                                                         border-radius:999px;
+                                                                                                                                                                                                                           background: rgba(255,255,255,.03);
+                                                                                                                                                                                                                           }
+
+                                                                                                                                                                                                                           .layout{
+                                                                                                                                                                                                                             margin-top:12px;
+                                                                                                                                                                                                                               display:grid;
+                                                                                                                                                                                                                                 grid-template-columns: 1.6fr 1fr;
+                                                                                                                                                                                                                                   gap:12px;
+                                                                                                                                                                                                                                     align-items:start;
+                                                                                                                                                                                                                                     }
+
+                                                                                                                                                                                                                                     /* =========================
+                                                                                                                                                                                                                                        PANELS / TABLE
+                                                                                                                                                                                                                                        ========================= */
+                                                                                                                                                                                                                                        .panelHead{
+                                                                                                                                                                                                                                          padding:12px 12px;
+                                                                                                                                                                                                                                            border-bottom:1px solid rgba(255,255,255,.08);
+                                                                                                                                                                                                                                              display:flex; justify-content:space-between; align-items:center;
+                                                                                                                                                                                                                                                gap:10px; flex-wrap:wrap;
+                                                                                                                                                                                                                                                  background: rgba(11,19,36,.55);
+                                                                                                                                                                                                                                                    border-top-left-radius: var(--radius2);
+                                                                                                                                                                                                                                                      border-top-right-radius: var(--radius2);
+                                                                                                                                                                                                                                                      }
+                                                                                                                                                                                                                                                      .panelHead b{font-size:13px}
+                                                                                                                                                                                                                                                      .panelHead span{font-size:12px; color:var(--muted)}
+
+                                                                                                                                                                                                                                                      .search{
+                                                                                                                                                                                                                                                        display:flex; align-items:center; gap:8px;
+                                                                                                                                                                                                                                                          padding:8px 10px;
+                                                                                                                                                                                                                                                            border:1px solid rgba(255,255,255,.10);
+                                                                                                                                                                                                                                                              border-radius:999px;
+                                                                                                                                                                                                                                                                background: rgba(255,255,255,.03);
+                                                                                                                                                                                                                                                                  min-width: 260px;
+                                                                                                                                                                                                                                                                  }
+                                                                                                                                                                                                                                                                  .search input{
+                                                                                                                                                                                                                                                                    border:0; outline:0; flex:1;
+                                                                                                                                                                                                                                                                      background: transparent; color: var(--text);
+                                                                                                                                                                                                                                                                        font-size:12px;
+                                                                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                                                        .search input:focus{outline:none}
+                                                                                                                                                                                                                                                                        .search .hint{font-size:11px; color:var(--muted)}
+
+                                                                                                                                                                                                                                                                        .table{width:100%; border-collapse: collapse}
+                                                                                                                                                                                                                                                                        .table th, .table td{
+                                                                                                                                                                                                                                                                          padding:10px 12px;
+                                                                                                                                                                                                                                                                            border-bottom:1px solid rgba(255,255,255,.08);
+                                                                                                                                                                                                                                                                              font-size:12px;
+                                                                                                                                                                                                                                                                                vertical-align:middle;
+                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                                .table th{
+                                                                                                                                                                                                                                                                                  color:rgba(148,163,184,.95);
+                                                                                                                                                                                                                                                                                    text-transform:uppercase;
+                                                                                                                                                                                                                                                                                      letter-spacing:.08em;
+                                                                                                                                                                                                                                                                                        font-size:11px;
+                                                                                                                                                                                                                                                                                          font-weight:950;
+                                                                                                                                                                                                                                                                                            background: rgba(255,255,255,.02);
+                                                                                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                                                                                            .table tr{cursor:pointer; transition:.12s ease}
+                                                                                                                                                                                                                                                                                            .table tr:hover{background: rgba(255,255,255,.03)}
+                                                                                                                                                                                                                                                                                            .table tr.selected{
+                                                                                                                                                                                                                                                                                              background: rgba(59,130,246,.12);
+                                                                                                                                                                                                                                                                                                outline: 1px solid rgba(59,130,246,.20);
+                                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                                                th.sel, td.sel{width:42px; padding-left:10px; padding-right:8px}
+                                                                                                                                                                                                                                                                                                .checkbox{
+                                                                                                                                                                                                                                                                                                  width:16px;height:16px;border-radius:5px;
+                                                                                                                                                                                                                                                                                                    border:1px solid rgba(255,255,255,.22);
+                                                                                                                                                                                                                                                                                                      background: rgba(255,255,255,.03);
+                                                                                                                                                                                                                                                                                                        display:inline-grid; place-items:center;
+                                                                                                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                                                                                        .checkbox input{
+                                                                                                                                                                                                                                                                                                          appearance:none;-webkit-appearance:none;
+                                                                                                                                                                                                                                                                                                            outline:none;margin:0;width:16px;height:16px;cursor:pointer
+                                                                                                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                                                                                                            .checkbox input:checked{
+                                                                                                                                                                                                                                                                                                              background: rgba(59,130,246,.40);
+                                                                                                                                                                                                                                                                                                                border-radius:5px;
+                                                                                                                                                                                                                                                                                                                  box-shadow: inset 0 0 0 2px rgba(10,15,31,.88);
+                                                                                                                                                                                                                                                                                                                  }
+                                                                                                                                                                                                                                                                                                                  .cellSub{display:block; margin-top:2px; font-size:11px; color:var(--muted)}
+
+                                                                                                                                                                                                                                                                                                                  .side{position:sticky; top:16px}
+                                                                                                                                                                                                                                                                                                                  .box{padding:12px}
+                                                                                                                                                                                                                                                                                                                  .sectionTitle{font-size:12px; font-weight:950; margin:0 0 8px;}
+                                                                                                                                                                                                                                                                                                                  .hintText{font-size:12px; color:var(--muted); margin:0}
+
+                                                                                                                                                                                                                                                                                                                  .kv{
+                                                                                                                                                                                                                                                                                                                    display:grid;
+                                                                                                                                                                                                                                                                                                                      grid-template-columns: 1fr auto;
+                                                                                                                                                                                                                                                                                                                        gap:8px 10px;
+                                                                                                                                                                                                                                                                                                                          font-size:12px;
+                                                                                                                                                                                                                                                                                                                            margin-top:8px;
+                                                                                                                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                                                                                                                            .kv .k{color:var(--muted)}
+
+                                                                                                                                                                                                                                                                                                                            .callout{
+                                                                                                                                                                                                                                                                                                                              border:1px solid rgba(59,130,246,.22);
+                                                                                                                                                                                                                                                                                                                                background: rgba(59,130,246,.08);
+                                                                                                                                                                                                                                                                                                                                  border-radius:16px;
+                                                                                                                                                                                                                                                                                                                                    padding:10px;
+                                                                                                                                                                                                                                                                                                                                      font-size:12px;
+                                                                                                                                                                                                                                                                                                                                        color: rgba(230,237,247,.92);
+                                                                                                                                                                                                                                                                                                                                        }
+
+                                                                                                                                                                                                                                                                                                                                        .list{
+                                                                                                                                                                                                                                                                                                                                          margin-top:10px;
+                                                                                                                                                                                                                                                                                                                                            border:1px solid rgba(255,255,255,.10);
+                                                                                                                                                                                                                                                                                                                                              border-radius:16px;
+                                                                                                                                                                                                                                                                                                                                                overflow:hidden;
+                                                                                                                                                                                                                                                                                                                                                  background: rgba(255,255,255,.02);
+                                                                                                                                                                                                                                                                                                                                                  }
+                                                                                                                                                                                                                                                                                                                                                  .list .row{
+                                                                                                                                                                                                                                                                                                                                                    display:flex; justify-content:space-between; align-items:center;
+                                                                                                                                                                                                                                                                                                                                                      padding:10px 10px;
+                                                                                                                                                                                                                                                                                                                                                        border-bottom:1px solid rgba(255,255,255,.08);
+                                                                                                                                                                                                                                                                                                                                                          font-size:12px;
+                                                                                                                                                                                                                                                                                                                                                            gap:10px;
+                                                                                                                                                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                                                                                                                                                            .list .row:last-child{border-bottom:0}
+                                                                                                                                                                                                                                                                                                                                                            .row .meta{display:flex; flex-direction:column; gap:2px}
+                                                                                                                                                                                                                                                                                                                                                            .row .meta small{color:var(--muted)}
+
+                                                                                                                                                                                                                                                                                                                                                            /* =========================
+                                                                                                                                                                                                                                                                                                                                                               HEADER / TOPBAR
+                                                                                                                                                                                                                                                                                                                                                               ========================= */
+                                                                                                                                                                                                                                                                                                                                                               .header{
+                                                                                                                                                                                                                                                                                                                                                                 display:flex; align-items:center; justify-content:space-between;
+                                                                                                                                                                                                                                                                                                                                                                   gap:12px; flex-wrap:wrap;
+                                                                                                                                                                                                                                                                                                                                                                     padding:10px 12px;
+                                                                                                                                                                                                                                                                                                                                                                     }
+                                                                                                                                                                                                                                                                                                                                                                     .header.card{background: rgba(15,23,42,.78)}
+
+                                                                                                                                                                                                                                                                                                                                                                     .hLeft{display:flex; align-items:center; gap:10px; min-width:0}
+                                                                                                                                                                                                                                                                                                                                                                     .hLogo{
+                                                                                                                                                                                                                                                                                                                                                                       width:30px;height:30px;border-radius:12px;
+                                                                                                                                                                                                                                                                                                                                                                         background: linear-gradient(135deg, rgba(59,130,246,.95), rgba(34,197,94,.65));
+                                                                                                                                                                                                                                                                                                                                                                           display:grid;place-items:center;
+                                                                                                                                                                                                                                                                                                                                                                             font-weight:900;font-size:12px;
+                                                                                                                                                                                                                                                                                                                                                                             }
+                                                                                                                                                                                                                                                                                                                                                                             .hCompany{display:flex; flex-direction:column; min-width:0}
+                                                                                                                                                                                                                                                                                                                                                                             .hCompany b{
+                                                                                                                                                                                                                                                                                                                                                                               font-size:13px; line-height:1.15;
+                                                                                                                                                                                                                                                                                                                                                                                 white-space:nowrap; overflow:hidden; text-overflow:ellipsis
+                                                                                                                                                                                                                                                                                                                                                                                 }
+                                                                                                                                                                                                                                                                                                                                                                                 .hCompany span{
+                                                                                                                                                                                                                                                                                                                                                                                   font-size:11px; color:var(--muted);
+                                                                                                                                                                                                                                                                                                                                                                                     white-space:nowrap; overflow:hidden; text-overflow:ellipsis
+                                                                                                                                                                                                                                                                                                                                                                                     }
+                                                                                                                                                                                                                                                                                                                                                                                     .hRight{
+                                                                                                                                                                                                                                                                                                                                                                                       display:flex; align-items:center; gap:8px;
+                                                                                                                                                                                                                                                                                                                                                                                         flex-wrap:wrap; justify-content:flex-end
+                                                                                                                                                                                                                                                                                                                                                                                         }
+
+
+                                                                                                                                                                                                                                                                                                                                                                                         
+
+/* =========================
+   DRAWER (solo pantalla Reconciliation)
+========================= */
+
+.drawerOverlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(3,8,18,.56);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease;
+  z-index: 2400;
+}
+.drawerOverlay.show{
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer{
+  position: fixed;
+  top: 14px;
+  bottom: 14px;
+  right: 14px;
+  width: min(520px, calc(100vw - 28px));
+  border-radius: var(--radius2);
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(11,19,36,.97);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow2);
+  transform: translateX(120%);
+  transition: transform .18s ease;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: 2800;
+}
+.drawer.open{
+  transform: translateX(0);
+}
+
+@media (max-width: 1100px){
+  .drawer{
+    top:12px;
+    bottom:12px;
+    right:12px;
+    width:min(92vw, 520px);
+  }
+}
+
+/* =========================
+   UX REFINEMENTS
+========================= */
+
+.runHeader{
+  padding:14px 16px;
+  margin-bottom:12px;
+}
+.runHeaderMain{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:16px;
+  flex-wrap:wrap;
+}
+.runEyebrow{
+  font-size:11px;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.runTitle{
+  font-size:20px;
+  font-weight:950;
+  margin-top:2px;
+}
+.runSub{
+  margin-top:4px;
+  font-size:12px;
+  color:var(--muted);
+}
+.runStatusBlock{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  align-items:flex-end;
+}
+.runStatus{
+  padding:8px 12px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+  border:1px solid rgba(255,255,255,.10);
+}
+.runStatus.ok{
+  background:rgba(34,197,94,.12);
+  border-color:rgba(34,197,94,.22);
+  color:rgba(187,255,212,.98);
+}
+.runStatus.review{
+  background:rgba(245,158,11,.12);
+  border-color:rgba(245,158,11,.22);
+  color:rgba(255,232,191,.98);
+}
+.runMeta{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  font-size:12px;
+  color:var(--muted);
+}
+
+.kpis.compact{
+  grid-template-columns: repeat(5, minmax(0,1fr));
+}
+.compactKpi{
+  padding:10px 12px;
+}
+.compactKpi .label{
+  font-size:11px;
+}
+.compactKpi .value{
+  margin-top:4px;
+  font-size:16px;
+}
+
+.reconcTable tr:hover{
+  background:rgba(255,255,255,.04);
+}
+.caseCell{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+}
+.caseMeta{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  min-width:0;
+}
+.typeBadge{
+  width:26px;
+  height:26px;
+  border-radius:10px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.03);
+  font-size:13px;
+  font-weight:900;
+}
+
+.quickStats{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+}
+.quickStat{
+  padding:10px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.quickStat span{
+  font-size:11px;
+  color:var(--muted);
+}
+.quickStat b{
+  font-size:16px;
+}
+.assistantActions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+.assistantHint{
+  margin-top:12px;
+  font-size:12px;
+  color:var(--muted);
+}
+
+.drawerHero{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+}
+.drawerHeroBlock{
+  padding:12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.drawerHeroBlock span{
+  font-size:11px;
+  color:var(--muted);
+}
+.drawerHeroBlock b{
+  font-size:18px;
+}
+.drawerSection{
+  margin-top:14px;
+}
+.drawerSectionTitle{
+  font-size:12px;
+  font-weight:900;
+  margin-bottom:8px;
+  color:var(--muted);
+}
+
+.reconFooter{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.footerSummary{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.footerPill{
+  padding:8px 10px;
+  border-radius:999px;
+  font-size:12px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.03);
+}
+.footerPill.pending{
+  color:rgba(255,232,191,.98);
+  border-color:rgba(245,158,11,.22);
+}
+.footerPill.exception{
+  color:rgba(255,203,203,.98);
+  border-color:rgba(239,68,68,.22);
+}
+.footerPill.ok{
+  color:rgba(187,255,212,.98);
+  border-color:rgba(34,197,94,.22);
+}
+
+@media (max-width: 1100px){
+  .kpis.compact{
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+  .drawerHero{
+    grid-template-columns:1fr;
+  }
+  .quickStats{
+    grid-template-columns:1fr;
+  }
+}
+
+/* =========================
+   UX POLISH PASS
+========================= */
+
+.reconcTable tr:hover{
+  background:rgba(255,255,255,.06);
+  transition:background .15s ease;
+}
+
+.kpis.compact .kpi{
+  padding:8px 10px;
+}
+
+.kpis.compact .value{
+  font-size:15px;
+}
+
+.quickStats.refined{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin-top:10px;
+}
+
+.quickStatCard{
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;
+  padding:10px;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.quickStatCard span{
+  font-size:11px;
+  color:var(--muted);
+}
+
+.quickStatCard b{
+  font-size:18px;
+}
+
+.footerSummary.refined{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
+.footerChip{
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  border:1px solid rgba(255,255,255,.12);
+}
+
+.footerChip.pending{
+  color:#ffd27a;
+}
+
+.footerChip.exception{
+  color:#ff8b8b;
+}
+
+.footerChip.auto{
+  color:#7ce3b1;
+}
+
+
+/* =========================
+   UX PRO PASS
+========================= */
+
+.runProgress{
+  padding:14px 16px;
+  margin-bottom:12px;
+}
+.runProgressTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.runProgressTitle{
+  font-size:14px;
+  font-weight:950;
+}
+.runProgressSub{
+  margin-top:4px;
+  font-size:12px;
+  color:var(--muted);
+}
+.runProgressActions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.progressBar{
+  width:100%;
+  height:10px;
+  border-radius:999px;
+  overflow:hidden;
+  background:rgba(255,255,255,.06);
+  margin-top:12px;
+}
+.progressBarFill{
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg, rgba(59,130,246,.95), rgba(34,197,94,.70));
+  box-shadow:0 0 24px rgba(59,130,246,.25);
+}
+.runProgressMeta{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:10px;
+  font-size:12px;
+  color:var(--muted);
+}
+
+.commandOverlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.45);
+  z-index:3100;
+}
+.commandPalette{
+  position:fixed;
+  top:90px;
+  left:50%;
+  transform:translateX(-50%);
+  width:min(680px, calc(100vw - 32px));
+  z-index:3200;
+  border-radius:20px;
+  overflow:hidden;
+}
+.commandHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding:14px 16px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.commandBody{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding:12px;
+}
+.commandItem{
+  width:100%;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+  color:var(--text);
+  border-radius:14px;
+  padding:12px 14px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+  transition:.14s ease;
+}
+.commandItem:hover{
+  background:rgba(255,255,255,.06);
+  border-color:rgba(59,130,246,.25);
+}
+.commandTitle{
+  font-size:13px;
+  font-weight:800;
+}
+.commandHint{
+  font-size:12px;
+  color:var(--muted);
+  font-family:var(--mono);
+}
+
+.reconcTable .search input:focus{
+  outline:none;
+}
+.reconcTable tr{
+  cursor:pointer;
+}
+.reconcTable tr:hover{
+  background:rgba(255,255,255,.06);
+}
+
+@media (max-width: 1100px){
+  .runProgressActions{
+    width:100%;
+  }
+}
+
+
+/* ===== Drawer UX improvements ===== */
+
+.drawerHead{
+padding:20px 24px;
+}
+
+.drawerBody{
+padding:24px;
+display:flex;
+flex-direction:column;
+gap:18px;
+}
+
+.drawerFooter{
+padding:20px 24px;
+}
+
+.drawerBody .callout{
+margin-top:6px;
+}
+
+.drawerBody .list{
+display:flex;
+flex-direction:column;
+gap:12px;
+}
+
+.drawerBody .row{
+padding:12px 0;
+}
+
+
+
+/* ===== Assistant panel redesign ===== */
+
+.assistantBody{
+padding:20px;
+display:flex;
+flex-direction:column;
+gap:20px;
+}
+
+.assistantStats{
+display:grid;
+grid-template-columns:1fr 1fr 1fr;
+gap:12px;
+}
+
+.statBox{
+background:rgba(255,255,255,0.04);
+border:1px solid rgba(255,255,255,0.06);
+border-radius:12px;
+padding:14px;
+}
+
+.statLabel{
+font-size:12px;
+opacity:.6;
+margin-bottom:6px;
+}
+
+.statValue{
+font-size:18px;
+font-weight:600;
+}
+
+.assistantAdvice{
+display:flex;
+flex-direction:column;
+gap:14px;
+}
+
+.assistantHint{
+background:rgba(106,166,255,.08);
+border:1px solid rgba(106,166,255,.2);
+padding:14px;
+border-radius:12px;
+}
+
+.assistantNext{
+background:rgba(255,255,255,.04);
+padding:14px;
+border-radius:12px;
+}
+
+
+/* ===== UX refinement pass ===== */
+
+.runProgressActions{
+  justify-content:flex-end;
+}
+
+.runProgressActions .small{
+  opacity:.78;
+}
+
+.subtleTip{
+  font-size:11px;
+  opacity:.72;
+  background:rgba(255,255,255,.025);
+  border-color:rgba(255,255,255,.06);
+}
+
+.assistantHeaderText{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.assistantHeaderText span{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.assistantBody{
+  padding:18px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.assistantStats{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:10px;
+}
+
+.statBox{
+  background:rgba(255,255,255,.035);
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:12px;
+  padding:12px 14px;
+}
+
+.statLabel{
+  font-size:11px;
+  color:var(--muted);
+  margin-bottom:6px;
+}
+
+.statValue{
+  font-size:16px;
+  font-weight:900;
+}
+
+.assistantAdvice{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.assistantHint,
+.assistantNext{
+  padding:14px 16px;
+  border-radius:14px;
+}
+
+.assistantHint{
+  background:rgba(59,130,246,.08);
+  border:1px solid rgba(59,130,246,.16);
+}
+
+.compactNext{
+  background:rgba(255,255,255,.035);
+  border:1px solid rgba(255,255,255,.06);
+}
+
+.assistantText{
+  margin-top:6px;
+  color:rgba(230,237,247,.88);
+  line-height:1.45;
+}
+
+.kpis.compact .kpi{
+  padding:10px 12px;
+}
+
+.kpis.compact .label{
+  font-size:11px;
+}
+
+.kpis.compact .value{
+  margin-top:4px;
+  font-size:16px;
+}
+
+.drawerHead{
+  padding:20px 22px 16px 22px;
+}
+
+.drawerBody{
+  padding:20px 22px;
+}
+
+.drawerFooter{
+  padding:18px 22px 22px 22px;
+}
+
+.drawerBody .list .row{
+  padding:14px 0;
+}
+
+.drawerBody .meta b{
+  display:block;
+  margin-bottom:4px;
+}
+
+.drawerHero{
+  gap:10px;
+}
+
+.drawerHeroBlock{
+  padding:14px;
+}
+
+.drawerHeroBlock b{
+  font-size:17px;
+}
+
+.reconcTable .cellSub{
+  opacity:.72;
+}
+
+.reconcTable th{
+  font-size:11px;
+}
+
+.reconcTable td{
+  padding-top:14px;
+  padding-bottom:14px;
+}
+
+/* ===== final polish pass ===== */
+
+.ghostBtn{
+  background:rgba(255,255,255,.02);
+  border-color:rgba(255,255,255,.06);
+  color:rgba(230,237,247,.82);
+}
+
+.ghostBtn:hover{
+  background:rgba(255,255,255,.05);
+  border-color:rgba(255,255,255,.10);
+}
+
+.searchIcon{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  transform:translateY(1px);
+}
+
+.runProgressActions .small{
+  opacity:.75;
+  font-size:11px;
+}
+
+.assistantHeaderText{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.assistantHeaderText span{
+  color:var(--muted);
+  font-size:12px;
+}
+
+.assistantBody{
+  padding:18px;
+  gap:18px;
+}
+
+.assistantStats{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+}
+
+.statBox{
+  padding:12px 14px;
+  border-radius:12px;
+}
+
+.statLabel{
+  font-size:11px;
+  color:var(--muted);
+  margin-bottom:6px;
+}
+
+.statValue{
+  font-size:15px;
+  font-weight:900;
+}
+
+.assistantHint,
+.assistantNext{
+  padding:14px 16px;
+  border-radius:14px;
+}
+
+.assistantText{
+  margin-top:8px;
+  line-height:1.45;
+  color:rgba(230,237,247,.88);
+}
+
+.kpis.compact .kpi{
+  padding:9px 11px;
+}
+
+.kpis.compact .label{
+  font-size:11px;
+}
+
+.kpis.compact .value{
+  margin-top:4px;
+  font-size:15px;
+}
+
+.footerExplain{
+  max-width:360px;
+  text-align:right;
+}
+
+.drawerHead{
+  padding:22px 24px 16px 24px;
+}
+
+.drawerBody{
+  padding:22px 24px;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+.drawerFooter{
+  padding:18px 24px 22px 24px;
+}
+
+.drawerHero{
+  gap:12px;
+}
+
+.drawerHeroBlock{
+  padding:16px;
+}
+
+.drawerHeroBlock span{
+  font-size:11px;
+  color:var(--muted);
+  display:block;
+  margin-bottom:6px;
+}
+
+.drawerHeroBlock b{
+  font-size:17px;
+}
+
+.drawerSectionTitle{
+  margin-bottom:10px;
+}
+
+.drawerBody .list .row{
+  padding:16px 0;
+}
+
+.drawerBody .meta b{
+  display:block;
+  margin-bottom:6px;
+}
+
+.reconcTable .cellSub{
+  opacity:.72;
+}
+
+.reconcTable td{
+  padding-top:14px;
+  padding-bottom:14px;
+}
+
+.reconcTable th[title]{
+  cursor:help;
+}
+
+/* ===== tiny final polish ===== */
+
+.drawerHead{
+  padding:24px 26px 18px 26px;
+}
+
+.drawerBody{
+  padding:24px 26px;
+  gap:20px;
+}
+
+.drawerFooter{
+  padding:20px 26px 24px 26px;
+}
+
+.drawerSection{
+  margin-top:4px;
+}
+
+.drawerSectionTitle{
+  margin-bottom:12px;
+}
+
+.drawerFooter .btn{
+  min-width:140px;
+}
+
+/* ===== SAFE DRAWER PATCH v2 ===== */
+
+.drawer{
+  width:min(460px, calc(100vw - 28px));
+}
+
+.drawerHead{
+  padding:16px 18px 10px 18px;
+}
+
+.drawerBody{
+  padding:14px 18px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.drawerFooter{
+  padding:12px 18px 16px 18px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:10px;
+}
+
+.drawerFooter .btn{
+  min-width:132px;
+}
+
+.rdHeader{
+  width:100%;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.rdTitleWrap{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.rdEyebrow{
+  font-size:11px;
+  line-height:1;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+
+.rdTitle{
+  font-size:22px;
+  line-height:1.08;
+  font-weight:950;
+  color:var(--text);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.rdSubtitle{
+  font-size:12px;
+  line-height:1.25;
+  color:var(--muted);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.rdCloseBtn{
+  flex:0 0 auto;
+  margin-top:0;
+}
+
+.rdMetrics{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:10px;
+}
+
+.rdMetric{
+  min-width:0;
+  min-height:76px;
+  padding:10px 12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:6px;
+}
+
+.rdMetricLabel{
+  font-size:11px;
+  line-height:1;
+  color:var(--muted);
+}
+
+.rdMetricValue{
+  font-size:16px;
+  line-height:1.15;
+  color:var(--text);
+}
+
+.rdSuggestion{
+  margin-top:0;
+  padding:10px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.rdSuggestion b{
+  font-size:12px;
+}
+
+.rdSuggestion span{
+  font-size:12px;
+  line-height:1.35;
+}
+
+.rdSection{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.rdSectionTitle{
+  font-size:12px;
+  font-weight:900;
+  color:var(--muted);
+}
+
+.rdContextGrid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+
+.rdCard{
+  min-width:0;
+  padding:12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.rdCardWide{
+  grid-column:1 / -1;
+}
+
+.rdCardLabel{
+  font-size:11px;
+  line-height:1;
+  color:var(--muted);
+}
+
+.rdCardValue{
+  font-size:13px;
+  line-height:1.35;
+  font-weight:700;
+  color:var(--text);
+  word-break:break-word;
+}
+
+.rdFooterSpacer{
+  flex:1;
+}
+
+@media (max-width: 1100px){
+  .drawer{
+    width:min(94vw, 460px);
+  }
+}
+
+@media (max-width: 640px){
+  .rdMetrics{
+    grid-template-columns:1fr;
+  }
+
+  .rdContextGrid{
+    grid-template-columns:1fr;
+  }
+
+  .rdCardWide{
+    grid-column:auto;
+  }
+
+  .drawerFooter{
+    flex-wrap:wrap;
+  }
+
+  .rdFooterSpacer{
+    display:none;
+  }
+
+  .drawerFooter .btn{
+    flex:1 1 100%;
+    min-width:0;
+  }
+}
+
+/* ===== SAFE DRAWER PATCH v3 ===== */
+
+.drawer{
+  width:min(500px, calc(100vw - 28px));
+}
+
+.drawerHead{
+  padding:14px 16px 8px 16px;
+}
+
+.drawerBody{
+  padding:10px 16px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.drawerFooter{
+  padding:10px 16px 14px 16px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:10px;
+}
+
+.drawerFooter .btn{
+  min-width:126px;
+}
+
+.rdxPrimaryDanger{
+  order:2;
+}
+
+.rdxHead{
+  width:100%;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.rdxHeadMain{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.rdxTitleRow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.rdxTitle{
+  font-size:24px;
+  line-height:1.05;
+  font-weight:950;
+  color:var(--text);
+  min-width:0;
+}
+
+.rdxSubtitle{
+  font-size:12px;
+  line-height:1.25;
+  color:var(--muted);
+}
+
+.rdxCloseBtn{
+  flex:0 0 auto;
+  margin-top:0;
+}
+
+.rdxStatus{
+  display:inline-flex;
+  align-items:center;
+  padding:5px 9px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:900;
+  border:1px solid rgba(255,255,255,.12);
+}
+
+.rdxStatus.is-ok{
+  color:rgba(187,255,212,.98);
+  background:rgba(34,197,94,.12);
+  border-color:rgba(34,197,94,.22);
+}
+
+.rdxStatus.is-pending{
+  color:rgba(255,232,191,.98);
+  background:rgba(245,158,11,.12);
+  border-color:rgba(245,158,11,.22);
+}
+
+.rdxStatus.is-exception{
+  color:rgba(255,203,203,.98);
+  background:rgba(239,68,68,.12);
+  border-color:rgba(239,68,68,.22);
+}
+
+.rdxNavBar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:8px 10px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+}
+
+.rdxNavBtn{
+  min-width:108px !important;
+  padding:8px 10px;
+}
+
+.rdxNavText{
+  font-size:11px;
+  font-weight:800;
+  color:var(--muted);
+  text-align:center;
+}
+
+.rdxMetrics{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0,1fr));
+  gap:8px;
+}
+
+.rdxMetricCard{
+  min-width:0;
+  min-height:76px;
+  padding:10px 12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:4px;
+}
+
+.rdxMetricTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+
+.rdxMetricLabel{
+  font-size:11px;
+  color:var(--muted);
+}
+
+.rdxMetricValue{
+  font-size:16px;
+  line-height:1.1;
+  color:var(--text);
+}
+
+.rdxMetricHint{
+  font-size:11px;
+  color:var(--muted);
+}
+
+.rdxInlineLink{
+  appearance:none;
+  border:0;
+  background:transparent;
+  color:#8cbcff;
+  font-size:11px;
+  font-weight:800;
+  padding:0;
+  cursor:pointer;
+}
+
+.rdxInlineLink:hover{
+  text-decoration:underline;
+}
+
+.rdxSectionTitle{
+  font-size:12px;
+  font-weight:900;
+  color:var(--muted);
+  margin-bottom:6px;
+}
+
+.rdxDecision{
+  padding:10px 12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.10);
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.rdxDecision.is-accept{
+  background:rgba(34,197,94,.10);
+  border-color:rgba(34,197,94,.20);
+}
+
+.rdxDecision.is-review{
+  background:rgba(245,158,11,.10);
+  border-color:rgba(245,158,11,.20);
+}
+
+.rdxDecision.is-exception{
+  background:rgba(239,68,68,.10);
+  border-color:rgba(239,68,68,.20);
+}
+
+.rdxDecisionLabel{
+  font-size:10px;
+  font-weight:900;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+
+.rdxDecisionTitle{
+  font-size:14px;
+  font-weight:950;
+  color:var(--text);
+}
+
+.rdxDecisionText{
+  font-size:12px;
+  line-height:1.35;
+  color:rgba(230,237,247,.88);
+}
+
+.rdxEvidenceBox{
+  padding:10px 12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+  font-size:12px;
+  line-height:1.4;
+  color:var(--text);
+}
+
+.rdxContextGrid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:8px;
+}
+
+.rdxInfoCard{
+  min-width:0;
+  padding:10px 12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+}
+
+.rdxInfoCardWide{
+  grid-column:1 / -1;
+}
+
+.rdxInfoLabel{
+  font-size:11px;
+  color:var(--muted);
+}
+
+.rdxInfoValue{
+  font-size:13px;
+  line-height:1.25;
+  color:var(--text);
+}
+
+.rdxConfidence{
+  display:inline-flex;
+  align-items:center;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:10px;
+  font-weight:900;
+  border:1px solid rgba(255,255,255,.12);
+}
+
+.rdxConfidence.is-high{
+  color:rgba(187,255,212,.98);
+  background:rgba(34,197,94,.12);
+  border-color:rgba(34,197,94,.22);
+}
+
+.rdxConfidence.is-medium{
+  color:rgba(255,232,191,.98);
+  background:rgba(245,158,11,.12);
+  border-color:rgba(245,158,11,.22);
+}
+
+.rdxConfidence.is-low{
+  color:rgba(255,203,203,.98);
+  background:rgba(239,68,68,.12);
+  border-color:rgba(239,68,68,.22);
+}
+
+.rdxFooterSpacer{
+  flex:1;
+}
+
+.rdmOverlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.40);
+  z-index:3300;
+}
+
+.rdmModal{
+  position:fixed;
+  left:50%;
+  top:50%;
+  transform:translate(-50%, -50%);
+  width:min(760px, calc(100vw - 32px));
+  z-index:3400;
+  border-radius:20px;
+  overflow:hidden;
+}
+
+.rdmHead{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  padding:16px 18px 12px 18px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+
+.rdmHeadText{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.rdmTitle{
+  font-size:18px;
+  line-height:1.1;
+}
+
+.rdmSubtitle{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.rdmBody{
+  padding:16px 18px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.rdmTable{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.rdmTable th,
+.rdmTable td{
+  padding:12px 10px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  text-align:left;
+  font-size:12px;
+}
+
+.rdmTable th{
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.05em;
+  font-size:11px;
+}
+
+.rdmNote{
+  font-size:12px;
+  line-height:1.45;
+  color:var(--muted);
+  padding:12px 14px;
+  border-radius:14px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.06);
+}
+
+.rdmFooter{
+  padding:12px 18px 16px 18px;
+  display:flex;
+  justify-content:flex-end;
+}
+
+@media (max-width: 1100px){
+  .drawer{
+    width:min(94vw, 500px);
+  }
+}
+
+@media (max-width: 640px){
+  .rdxTitle{
+    font-size:22px;
+  }
+
+  .rdxNavBar,
+  .rdxMetrics,
+  .rdxContextGrid{
+    grid-template-columns:1fr;
+  }
+
+  .rdxNavBar{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .rdxNavBtn{
+    min-width:0 !important;
+  }
+
+  .rdxInfoCardWide{
+    grid-column:auto;
+  }
+
+  .drawerFooter{
+    flex-wrap:wrap;
+  }
+
+  .rdxFooterSpacer{
+    display:none;
+  }
+
+  .drawerFooter .btn{
+    flex:1 1 100%;
+    min-width:0;
+  }
+
+  .rdmModal{
+    width:min(96vw, 760px);
+  }
+
+  .rdmTable{
+    display:block;
+    overflow-x:auto;
+  }
+}
+
+/* ===== END SAFE DRAWER PATCH v3 ===== */
+
+/* ===== drawer footer pinned to bottom ===== */
+
+.drawer{
+  display:flex;
+  flex-direction:column;
+}
+
+.drawerBody{
+  flex:1 1 auto;
+  min-height:0;
+}
+
+.drawerFooter{
+  margin-top:auto;
+  flex:0 0 auto;
+}
+
+
+/* ===== subtle drawer navigation ===== */
+
+.rdxNavBar{
+  padding:6px 8px;
+  border-radius:12px;
+  background:rgba(255,255,255,.02);
+  border-color:rgba(255,255,255,.06);
+}
+
+.rdxNavBtn{
+  min-width:84px !important;
+  padding:6px 10px;
+  font-size:11px;
+  font-weight:800;
+  color:rgba(230,237,247,.78);
+  background:rgba(255,255,255,.02);
+  border-color:rgba(255,255,255,.08);
+}
+
+.rdxNavBtn:hover{
+  background:rgba(255,255,255,.05);
+  border-color:rgba(255,255,255,.12);
+}
+
+.rdxNavText{
+  font-size:10px;
+  font-weight:700;
+  color:rgba(148,163,184,.88);
+  letter-spacing:.02em;
+}
+
+.rdxNavBtn:disabled{
+  opacity:.35;
+}
