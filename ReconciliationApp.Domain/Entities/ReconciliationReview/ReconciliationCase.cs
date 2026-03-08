@@ -10,9 +10,9 @@ public sealed class ReconciliationCase
 
     public string CaseId { get; private set; } = default!;
 
-    public int DebtRowNumber { get; private set; }
+    public int? DebtRowNumber { get; private set; }
 
-    public int PaymentRowNumber { get; private set; }
+    public int? PaymentRowNumber { get; private set; }
 
     public string Customer { get; private set; } = default!;
 
@@ -43,8 +43,8 @@ public sealed class ReconciliationCase
     public ReconciliationCase(
         Guid runId,
         string caseId,
-        int debtRow,
-        int paymentRow,
+        int? debtRow,
+        int? paymentRow,
         string customer,
         decimal debtAmount,
         decimal paymentAmount,

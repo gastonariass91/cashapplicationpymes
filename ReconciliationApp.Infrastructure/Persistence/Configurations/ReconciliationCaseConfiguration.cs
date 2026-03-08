@@ -15,8 +15,8 @@ public sealed class ReconciliationCaseConfiguration : IEntityTypeConfiguration<R
         b.Property(x => x.ReconciliationRunId).HasColumnName("reconciliation_run_id").IsRequired();
         b.Property(x => x.CaseId).HasColumnName("case_id").HasMaxLength(64).IsRequired();
 
-        b.Property(x => x.DebtRowNumber).HasColumnName("debt_row_number").IsRequired();
-        b.Property(x => x.PaymentRowNumber).HasColumnName("payment_row_number").IsRequired();
+        b.Property(x => x.DebtRowNumber).HasColumnName("debt_row_number");
+        b.Property(x => x.PaymentRowNumber).HasColumnName("payment_row_number");
 
         b.Property(x => x.Customer).HasColumnName("customer").HasMaxLength(128).IsRequired();
         b.Property(x => x.DebtAmount).HasColumnName("debt_amount").HasColumnType("numeric(18,2)").IsRequired();

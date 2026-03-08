@@ -100,8 +100,8 @@ public static class ReconciliationRunQueryEndpoints
         var cases = orderedCases
             .Select(x => new ReconciliationCaseDto(
                 x.CaseId,
-                x.DebtRowNumber,
-                x.PaymentRowNumber,
+                x.DebtRowNumber ?? 0,
+                x.PaymentRowNumber ?? 0,
                 x.Customer,
                 x.DebtAmount,
                 x.PaymentAmount,
@@ -114,17 +114,23 @@ public static class ReconciliationRunQueryEndpoints
                 x.Suggestion))
             .ToList();
 
+        var totalCases = cases.Count;
+        var resolvedCases = cases.Count(c => c.Status is "ok" or "exception");
+        var automaticCases = cases.Count(c => c.Status == "ok");
+        var pendingCases = cases.Count(c => c.Status == "pending");
+        var exceptionCases = cases.Count(c => c.Status == "exception");
+
         var summary = new RunSummaryDto(
             RunId: runId,
             CompanyId: "garcia-sa",
             CompanyName: "Alimentos Garcia SA",
             Period: "2026-03",
             Status: run.Status,
-            TotalCases: cases.Count,
-            ResolvedCases: cases.Count(c => c.Status is "ok" or "exception"),
-            AutomaticCases: cases.Count(c => c.Status == "ok"),
-            PendingCases: cases.Count(c => c.Status == "pending"),
-            ExceptionCases: cases.Count(c => c.Status == "exception"),
+            TotalCases: totalCases,
+            ResolvedCases: resolvedCases,
+            AutomaticCases: automaticCases,
+            PendingCases: pendingCases,
+            ExceptionCases: exceptionCases,
             DebtsRowsTotal: 28,
             PaymentsRowsTotal: 26,
             DebtsAmountTotal: 1250000m,
