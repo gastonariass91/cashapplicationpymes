@@ -5,79 +5,210 @@
 
 <aside class="drawer @(Store.DrawerOpen ? "open" : "")" aria-hidden="@(!Store.DrawerOpen)">
   <div class="drawerHead">
-    <div style="display:flex; flex-direction:column; gap:6px; min-width:0;">
-      <b>@(Store.SelectedRow is null ? "Resolver caso" : $"Resolver · {Store.SelectedRow.Customer}")</b>
-      <span class="small">@DrawerSub()</span>
-    </div>
+    <div class="rdxHead">
+      <div class="rdxHeadMain">
+        <div class="rdxTitleRow">
+          <b class="rdxTitle">@CaseTitle()</b>
+          @if (Store.SelectedRow is not null)
+          {
+            <span class="rdxStatus @StatusClass(Store.SelectedRow.Status)">@StatusLabel(Store.SelectedRow.Status)</span>
+          }
+        </div>
+        <div class="rdxSubtitle">@CaseSubtitle()</div>
+      </div>
 
-    <button class="iconBtn" title="Cerrar" @onclick="OnCloseRequested">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
-    </button>
+      <button class="iconBtn rdxCloseBtn"
+              title="Cerrar"
+              aria-label="Cerrar drawer"
+              @onclick="OnCloseRequested">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
   </div>
 
   <div class="drawerBody">
     @if (Store.SelectedRow is null)
     {
-      <div class="callout">Seleccioná una fila para ver el detalle.</div>
+      <div class="callout rdxBanner">
+        <b>Sin caso seleccionado</b>
+        <span>Elegí una fila de la tabla para ver el detalle.</span>
+      </div>
     }
     else
     {
       var r = Store.SelectedRow;
 
-      <div class="drawerHero">
-        <div class="drawerHeroBlock">
-          <span>Deuda</span>
-          <b>@ReconciliationStore.Money(r.DebtAmount)</b>
+      <div class="rdxNavBar">
+        <button class="btn rdxNavBtn"
+                disabled="@(!Store.HasPreviousVisibleSelection())"
+                @onclick="OpenPreviousVisible">
+          ← Anterior
+        </button>
+
+        <span class="rdxNavText">
+          Caso @Store.CurrentVisiblePosition() de @Store.VisibleCount()
+        </span>
+
+        <button class="btn rdxNavBtn"
+                disabled="@(!Store.HasNextVisibleSelection())"
+                @onclick="OpenNextVisible">
+          Siguiente →
+        </button>
+      </div>
+
+      <div class="rdxMetrics">
+        <div class="rdxMetricCard">
+          <div class="rdxMetricTop">
+            <span class="rdxMetricLabel">Deuda</span>
+            <button type="button" class="rdxInlineLink" @onclick="OpenDebtDetail">Ver deuda</button>
+          </div>
+          <b class="rdxMetricValue">@ReconciliationStore.Money(r.DebtAmount)</b>
+          <span class="rdxMetricHint">1 documento</span>
         </div>
-        <div class="drawerHeroBlock">
-          <span>Pago</span>
-          <b>@ReconciliationStore.Money(r.PaymentAmount)</b>
+
+        <div class="rdxMetricCard">
+          <div class="rdxMetricTop">
+            <span class="rdxMetricLabel">Pago</span>
+            <button type="button" class="rdxInlineLink" @onclick="OpenPaymentDetail">Ver pago</button>
+          </div>
+          <b class="rdxMetricValue">@ReconciliationStore.Money(r.PaymentAmount)</b>
+          <span class="rdxMetricHint">1 movimiento</span>
         </div>
-        <div class="drawerHeroBlock deltaBlock">
-          <span>Δ</span>
-          <b class="delta @ReconciliationUi.DeltaClass(r.Delta)">@ReconciliationStore.Money(r.Delta)</b>
+
+        <div class="rdxMetricCard">
+          <span class="rdxMetricLabel">Δ</span>
+          <b class="rdxMetricValue delta @ReconciliationUi.DeltaClass(r.Delta)">
+            @ReconciliationStore.Money(r.Delta)
+          </b>
+          <span class="rdxMetricHint">@DeltaHint(r)</span>
         </div>
       </div>
 
-      <div class="callout" style="margin-top:8px;">
-        <b>Sugerencia:</b> @r.Suggestion
+      <div class="rdxDecision @RecommendationClass(r)">
+        <div class="rdxDecisionLabel">Recomendación del sistema</div>
+        <div class="rdxDecisionTitle">@RecommendationTitle(r)</div>
+        <div class="rdxDecisionText">@RecommendationSupportText(r)</div>
       </div>
 
-      <div class="drawerSection">
-        <div class="drawerSectionTitle">Contexto</div>
-        <div class="list">
-          <div class="row">
-            <div class="meta"><b>Tipo</b><small>@ReconciliationUi.TypeLabel(r.Type)</small></div>
+      <div class="rdxEvidence">
+        <div class="rdxSectionTitle">Motivo detectado</div>
+        <div class="rdxEvidenceBox">@EvidenceLabel(r.Evidence)</div>
+      </div>
+
+      <div class="rdxContext">
+        <div class="rdxSectionTitle">Contexto</div>
+
+        <div class="rdxContextGrid">
+          <div class="rdxInfoCard">
+            <span class="rdxInfoLabel">Tipo</span>
+            <b class="rdxInfoValue">@HumanTypeLabel(r.Type)</b>
           </div>
-          <div class="row">
-            <div class="meta"><b>Regla aplicada</b><small>@r.Rule</small></div>
+
+          <div class="rdxInfoCard">
+            <span class="rdxInfoLabel">Confianza</span>
+            <b class="rdxInfoValue">
+              <span class="rdxConfidence @ConfidenceClass(r.Confidence)">@ConfidenceLabel(r.Confidence)</span>
+            </b>
           </div>
-          <div class="row">
-            <div class="meta"><b>Evidencia</b><small>@r.Evidence</small></div>
-          </div>
-          <div class="row">
-            <div class="meta"><b>Confianza</b><small>@r.Confidence</small></div>
+
+          <div class="rdxInfoCard rdxInfoCardWide">
+            <span class="rdxInfoLabel">Regla aplicada</span>
+            <b class="rdxInfoValue">@RuleLabel(r.Rule)</b>
           </div>
         </div>
       </div>
     }
   </div>
 
-  <div class="drawerFooter">
-    <span style="flex:1"></span>
-    <button class="btn danger"
-            disabled="@(Store.SelectedRow is null)"
-            @onclick="OnExceptionRequested">
-      Marcar excepción
-    </button>
+  @if (ActionToast is not null)
+  {
+    <div class="rdxToastInline">
+      @ActionToast
+    </div>
+  }
 
-    <button class="btn primary"
-            disabled="@(Store.SelectedRow is null)"
-            @onclick="OnAcceptRequested">
-      Aceptar
-    </button>
+  <div class="drawerFooter">
+    <span class="rdxFooterSpacer"></span>
+
+    @if (Store.SelectedRow is not null && ShouldPrimaryBeException(Store.SelectedRow))
+    {
+      <button class="btn"
+              disabled="@(Store.SelectedRow is null)"
+              @onclick="OnAcceptRequested">
+        Aceptar igualmente
+      </button>
+
+      <button class="btn danger rdxPrimaryDanger"
+              disabled="@(Store.SelectedRow is null)"
+              @onclick="OnExceptionRequested">
+        Marcar excepción
+      </button>
+    }
+    else
+    {
+      <button class="btn danger"
+              disabled="@(Store.SelectedRow is null)"
+              @onclick="OnExceptionRequested">
+        Marcar excepción
+      </button>
+
+      <button class="btn primary"
+              disabled="@(Store.SelectedRow is null)"
+              @onclick="OnAcceptRequested">
+        Aceptar
+      </button>
+    }
   </div>
 </aside>
+
+@if (Store.SelectedRow is not null && DetailModal is not null)
+{
+  var r = Store.SelectedRow;
+
+  <div class="rdmOverlay" @onclick="CloseDetailModal"></div>
+
+  <div class="rdmModal card" role="dialog" aria-modal="true" aria-label="@DetailModal.Title">
+    <div class="rdmHead">
+      <div class="rdmHeadText">
+        <b class="rdmTitle">@DetailModal.Title</b>
+        <span class="rdmSubtitle">@DetailModal.Subtitle</span>
+      </div>
+
+      <button class="iconBtn" title="Cerrar" aria-label="Cerrar modal" @onclick="CloseDetailModal">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="rdmBody">
+      <table class="rdmTable">
+        <thead>
+          <tr>
+            <th>Registro</th>
+            <th>Cliente</th>
+            <th>Fila</th>
+            <th>Importe</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>@DetailModal.RecordLabel</td>
+            <td>@r.Customer</td>
+            <td>#@DetailModal.RowNumber</td>
+            <td>@ReconciliationStore.Money(DetailModal.Amount)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="rdmNote">
+        Esta vista usa el nivel de detalle disponible hoy en el caso. Más adelante acá pueden mostrarse facturas y pagos reales con fecha, referencia y estado.
+      </div>
+    </div>
+
+    <div class="rdmFooter">
+      <button class="btn" @onclick="CloseDetailModal">Cerrar</button>
+    </div>
+  </div>
+}
 
 @code {
   [Parameter, EditorRequired] public ReconciliationStore Store { get; set; } = default!;
@@ -85,14 +216,211 @@
   [Parameter] public EventCallback AcceptRequested { get; set; }
   [Parameter] public EventCallback ExceptionRequested { get; set; }
 
-  Task OnCloseRequested() => CloseRequested.InvokeAsync();
-  Task OnAcceptRequested() => AcceptRequested.InvokeAsync();
-  Task OnExceptionRequested() => ExceptionRequested.InvokeAsync();
+  DetailModalState? DetailModal { get; set; }
+  string? ActionToast { get; set; }
 
-  string DrawerSub()
+  Task OnCloseRequested() => CloseRequested.InvokeAsync();
+
+  async Task OnAcceptRequested()
   {
-    if (Store.SelectedRow is null) return "Seleccioná una fila";
-    var r = Store.SelectedRow;
-    return $"{ReconciliationUi.TypeLabel(r.Type)} · {r.Rule}";
+    await AcceptRequested.InvokeAsync();
+    ActionToast = "✔ Caso aceptado";
+    StateHasChanged();
+    _ = HideToast();
   }
+
+  async Task OnExceptionRequested()
+  {
+    await ExceptionRequested.InvokeAsync();
+    ActionToast = "⚠ Marcado como excepción";
+    StateHasChanged();
+    _ = HideToast();
+  }
+
+  async Task HideToast()
+  {
+    await Task.Delay(1800);
+    ActionToast = null;
+    await InvokeAsync(StateHasChanged);
+  }
+
+  void OpenPreviousVisible() => Store.OpenPreviousVisible();
+  void OpenNextVisible() => Store.OpenNextVisible();
+
+  void OpenDebtDetail()
+  {
+    if (Store.SelectedRow is null) return;
+
+    DetailModal = new DetailModalState(
+      "Detalle de deuda",
+      "Vista resumida de los registros de deuda involucrados",
+      "Registro de deuda",
+      Store.SelectedRow.DebtRowNumber,
+      Store.SelectedRow.DebtAmount);
+  }
+
+  void OpenPaymentDetail()
+  {
+    if (Store.SelectedRow is null) return;
+
+    DetailModal = new DetailModalState(
+      "Detalle de pago",
+      "Vista resumida de los movimientos de pago involucrados",
+      "Registro de pago",
+      Store.SelectedRow.PaymentRowNumber,
+      Store.SelectedRow.PaymentAmount);
+  }
+
+  void CloseDetailModal() => DetailModal = null;
+
+  bool ShouldPrimaryBeException(ReconciliationRow r)
+  {
+    var s = (r.Suggestion ?? "").Trim().ToLowerInvariant();
+
+    if (s.Contains("excep")) return true;
+    if (r.Type is ReconMatchType.Dup or ReconMatchType.Amb or ReconMatchType.NoMatch) return true;
+
+    return false;
+  }
+
+  string CaseTitle()
+  {
+    if (Store.SelectedRow is null) return "Resolver conciliación";
+
+    var r = Store.SelectedRow;
+    return r.Type switch
+    {
+      ReconMatchType.Exact => $"Conciliación exacta · {r.Customer}",
+      ReconMatchType.Dup => $"Pago duplicado · {r.Customer}",
+      ReconMatchType.Partial => $"Conciliación parcial · {r.Customer}",
+      ReconMatchType.Multi => $"Conciliación múltiple · {r.Customer}",
+      ReconMatchType.Amb => $"Caso ambiguo · {r.Customer}",
+      _ => $"Caso sin conciliación · {r.Customer}"
+    };
+  }
+
+  string CaseSubtitle()
+  {
+    if (Store.SelectedRow is null) return "Seleccioná una fila para ver el detalle";
+
+    var r = Store.SelectedRow;
+
+    return r.Type switch
+    {
+      ReconMatchType.Exact => "Coincidencia por cliente y monto",
+      ReconMatchType.Dup => "Posible pago duplicado",
+      ReconMatchType.Partial => "Relación parcial entre deuda y pago",
+      ReconMatchType.Multi => "Más de un registro podría participar en la coincidencia",
+      ReconMatchType.Amb => "Se requiere revisión antes de confirmar",
+      _ => "No se encontró una coincidencia concluyente"
+    };
+  }
+
+  string StatusLabel(RowStatus status) => status switch
+  {
+    RowStatus.Ok => "Aceptado",
+    RowStatus.Exception => "Excepción",
+    _ => "Pendiente"
+  };
+
+  string StatusClass(RowStatus status) => status switch
+  {
+    RowStatus.Ok => "is-ok",
+    RowStatus.Exception => "is-exception",
+    _ => "is-pending"
+  };
+
+  string HumanTypeLabel(ReconMatchType type) => type switch
+  {
+    ReconMatchType.Exact => "Exacta",
+    ReconMatchType.Dup => "Duplicado",
+    ReconMatchType.Partial => "Parcial",
+    ReconMatchType.Multi => "Múltiple",
+    ReconMatchType.Amb => "Ambigua",
+    _ => "Sin match"
+  };
+
+  string ConfidenceLabel(Confidence confidence) => confidence switch
+  {
+    Confidence.Alta => "Alta",
+    Confidence.Media => "Media",
+    _ => "Baja"
+  };
+
+  string ConfidenceClass(Confidence confidence) => confidence switch
+  {
+    Confidence.Alta => "is-high",
+    Confidence.Media => "is-medium",
+    _ => "is-low"
+  };
+
+  string RecommendationClass(ReconciliationRow r)
+  {
+    if (ShouldPrimaryBeException(r)) return "is-exception";
+
+    var s = (r.Suggestion ?? "").Trim().ToLowerInvariant();
+    if (s.Contains("cuidado") || s.Contains("revis")) return "is-review";
+
+    return "is-accept";
+  }
+
+  string RecommendationTitle(ReconciliationRow r)
+  {
+    var s = (r.Suggestion ?? "").Trim();
+    if (!string.IsNullOrWhiteSpace(s)) return s;
+
+    return r.Type switch
+    {
+      ReconMatchType.Exact => "Aceptar",
+      ReconMatchType.Dup => "Marcar excepción",
+      ReconMatchType.Amb => "Revisar antes de aceptar",
+      ReconMatchType.Partial => "Revisar con cuidado",
+      ReconMatchType.Multi => "Analizar combinación",
+      _ => "Analizar caso"
+    };
+  }
+
+  string RecommendationSupportText(ReconciliationRow r)
+  {
+    return r.Type switch
+    {
+      ReconMatchType.Exact => "Los importes y la regla aplicada sugieren una conciliación directa.",
+      ReconMatchType.Dup => "El sistema detectó un posible pago repetido o ya conciliado.",
+      ReconMatchType.Partial => "Existe relación entre deuda y pago, pero no es totalmente exacta.",
+      ReconMatchType.Amb => "Hay señales insuficientes o conflictivas para decidir automáticamente.",
+      ReconMatchType.Multi => "El caso podría involucrar varias combinaciones posibles.",
+      _ => "Revisá evidencia y contexto antes de decidir."
+    };
+  }
+
+  string EvidenceLabel(string evidence)
+  {
+    if (string.IsNullOrWhiteSpace(evidence)) return "No hay evidencia adicional disponible.";
+
+    return evidence
+      .Replace("ref coincide", "referencia coincide")
+      .Replace("monto exacto", "importe exacto")
+      .Replace("Mismo cliente", "Mismo cliente")
+      .Trim();
+  }
+
+  string DeltaHint(ReconciliationRow r)
+  {
+    if (r.Delta == 0) return "Sin diferencia";
+    if (r.Delta > 0) return "Pago mayor a deuda";
+    return "Pago menor a deuda";
+  }
+
+  string RuleLabel(string rule)
+  {
+    if (string.IsNullOrWhiteSpace(rule)) return "Sin regla";
+    return rule.Replace("+", " + ").Trim();
+  }
+
+  sealed record DetailModalState(
+    string Title,
+    string Subtitle,
+    string RecordLabel,
+    int RowNumber,
+    decimal Amount);
 }

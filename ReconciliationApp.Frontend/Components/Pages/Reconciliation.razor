@@ -146,7 +146,6 @@ else
                        ToggleOneRequested="ToggleOne"
                        OpenDrawerRequested="OpenDrawer" />
 
-  <ReconciliationAssistant Store="Store" />
 </div>
 
 <ReconciliationDrawer Store="Store"
@@ -156,12 +155,20 @@ else
 
 <ReconciliationFooter Store="Store"
                       AcceptVisibleRequested="AcceptVisible" />
+
+@if (!string.IsNullOrWhiteSpace(PageToast))
+{
+  <div class="pageToast">
+    @PageToast
+  </div>
+}
 }
 
 @code {
   private DotNetObjectReference<Reconciliation>? _objRef;
   private bool CommandPaletteOpen;
   private const string RunId = "run-2026-03-0002";
+  private string? PageToast;
 
   int ResolvedCount => Store.AutoCount + Store.ExceptionCount;
   int RunProgressPct => Store.Rows.Count == 0 ? 0 : (int)Math.Round((double)ResolvedCount / Store.Rows.Count * 100);
@@ -317,7 +324,11 @@ else
     if (ids.Count == 0) return;
 
     var ok = await ApiClient.BulkAcceptAsync(RunId, ids);
-    if (ok) await ReloadRunAsync();
+    if (ok)
+    {
+      await ReloadRunAsync();
+      await ShowPageToast("✔ Casos visibles aceptados");
+    }
   }
 
   async Task AcceptOne()
@@ -329,6 +340,7 @@ else
     {
       await ReloadRunAsync();
       Store.CloseDrawer();
+      await ShowPageToast("✔ Caso aceptado");
     }
   }
 
@@ -341,6 +353,16 @@ else
     {
       await ReloadRunAsync();
       Store.CloseDrawer();
+      await ShowPageToast("⚠ Marcado como excepción");
     }
+  }
+
+  async Task ShowPageToast(string message)
+  {
+    PageToast = message;
+    await InvokeAsync(StateHasChanged);
+    await Task.Delay(1800);
+    PageToast = null;
+    await InvokeAsync(StateHasChanged);
   }
 }

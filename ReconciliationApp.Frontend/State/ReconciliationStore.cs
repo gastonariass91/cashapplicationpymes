@@ -47,6 +47,53 @@ public sealed class ReconciliationStore
     public IEnumerable<ReconciliationRow> VisibleRows()
         => _rows.Where(PassesView).Where(PassesConf).Where(PassesQuery);
 
+    public IReadOnlyList<ReconciliationRow> VisibleRowsList()
+        => VisibleRows().ToList();
+
+    public bool HasPreviousVisibleSelection()
+    {
+        var currentIndex = CurrentVisibleIndex();
+        return currentIndex > 0;
+    }
+
+    public bool HasNextVisibleSelection()
+    {
+        var rows = VisibleRowsList();
+        var currentIndex = CurrentVisibleIndex();
+        return currentIndex >= 0 && currentIndex < rows.Count - 1;
+    }
+
+    public void OpenPreviousVisible()
+    {
+        var rows = VisibleRowsList();
+        var currentIndex = CurrentVisibleIndex();
+        if (currentIndex <= 0) return;
+
+        SelectedKey = rows[currentIndex - 1].Key;
+        DrawerOpen = true;
+        OnChange?.Invoke();
+    }
+
+    public void OpenNextVisible()
+    {
+        var rows = VisibleRowsList();
+        var currentIndex = CurrentVisibleIndex();
+        if (currentIndex < 0 || currentIndex >= rows.Count - 1) return;
+
+        SelectedKey = rows[currentIndex + 1].Key;
+        DrawerOpen = true;
+        OnChange?.Invoke();
+    }
+
+    public int CurrentVisiblePosition()
+    {
+        var currentIndex = CurrentVisibleIndex();
+        return currentIndex < 0 ? 0 : currentIndex + 1;
+    }
+
+    public int VisibleCount()
+        => VisibleRowsList().Count;
+
     public void LoadFromApi(ApiReconciliationRunDto dto)
     {
         _rows.Clear();
@@ -212,6 +259,19 @@ public sealed class ReconciliationStore
 
     public static string Money(decimal n)
         => n.ToString("C0", EsAr);
+
+    private int CurrentVisibleIndex()
+    {
+        if (SelectedKey is null) return -1;
+
+        var rows = VisibleRowsList();
+        for (var i = 0; i < rows.Count; i++)
+        {
+            if (rows[i].Key == SelectedKey) return i;
+        }
+
+        return -1;
+    }
 
     private bool PassesView(ReconciliationRow r)
         => View switch
