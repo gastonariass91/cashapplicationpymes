@@ -1,96 +1,82 @@
 using Microsoft.AspNetCore.Http;
 using ReconciliationApp.API.Contracts.Reconciliation;
+using ReconciliationApp.Application.Abstractions.Repositories;
+using ReconciliationApp.Domain.Entities.ReconciliationReview;
 
 namespace ReconciliationApp.API.Endpoints;
 
 public static class ReconciliationRunQueryEndpoints
 {
-    private static readonly Dictionary<string, List<ReconciliationCaseDto>> Runs = new();
-
     public static IEndpointRouteBuilder MapReconciliationRunQueryEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/reconciliation-runs/{runId}", (string runId) =>
+        app.MapGet("/api/reconciliation-runs/{runId}", async (string runId, IReconciliationReviewRepository repo, CancellationToken ct) =>
         {
-            var cases = GetOrSeedRun(runId);
-            var summary = BuildSummary(runId, cases);
-            return Results.Ok(new ReconciliationRunDto(summary, cases));
+            var ok = await repo.SeedRunIfMissingAsync(runId, ct);
+            if (!ok) return Results.NotFound();
+
+            var run = await repo.GetRunAsync(runId, ct);
+            if (run is null) return Results.NotFound();
+
+            var dto = ToDto(runId, run);
+            return Results.Ok(dto);
         })
         .WithName("GetReconciliationRun")
         .WithTags("Reconciliation Runs")
-        .Produces<ReconciliationRunDto>(StatusCodes.Status200OK);
+        .Produces<ReconciliationRunDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status404NotFound);
 
-        app.MapPost("/api/reconciliation-runs/{runId}/cases/{caseId}/accept", (string runId, string caseId) =>
+        app.MapPost("/api/reconciliation-runs/{runId}/cases/{caseId}/accept", async (string runId, string caseId, IReconciliationReviewRepository repo, CancellationToken ct) =>
         {
-            var cases = GetOrSeedRun(runId);
-            var idx = cases.FindIndex(x => x.CaseId == caseId);
-            if (idx < 0) return Results.NotFound();
+            var seeded = await repo.SeedRunIfMissingAsync(runId, ct);
+            if (!seeded) return Results.NotFound();
 
-            var current = cases[idx];
-            cases[idx] = current with
-            {
-                Status = "ok",
-                Confidence = current.Confidence == "low" ? "medium" : current.Confidence,
-                Suggestion = "Aceptar"
-            };
+            var ok = await repo.AcceptCaseAsync(runId, caseId, ct);
+            if (!ok) return Results.NotFound();
 
             return Results.Ok(new ActionResponseDto(true, "Caso aceptado correctamente", "in_review"));
         })
         .WithTags("Reconciliation Runs")
-        .Produces<ActionResponseDto>(StatusCodes.Status200OK);
+        .Produces<ActionResponseDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status404NotFound);
 
-        app.MapPost("/api/reconciliation-runs/{runId}/cases/{caseId}/exception", (string runId, string caseId) =>
+        app.MapPost("/api/reconciliation-runs/{runId}/cases/{caseId}/exception", async (string runId, string caseId, IReconciliationReviewRepository repo, CancellationToken ct) =>
         {
-            var cases = GetOrSeedRun(runId);
-            var idx = cases.FindIndex(x => x.CaseId == caseId);
-            if (idx < 0) return Results.NotFound();
+            var seeded = await repo.SeedRunIfMissingAsync(runId, ct);
+            if (!seeded) return Results.NotFound();
 
-            var current = cases[idx];
-            cases[idx] = current with
-            {
-                Status = "exception",
-                Suggestion = "Excepción"
-            };
+            var ok = await repo.MarkExceptionAsync(runId, caseId, ct);
+            if (!ok) return Results.NotFound();
 
             return Results.Ok(new ActionResponseDto(true, "Caso marcado como excepción", "in_review"));
         })
         .WithTags("Reconciliation Runs")
-        .Produces<ActionResponseDto>(StatusCodes.Status200OK);
+        .Produces<ActionResponseDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status404NotFound);
 
-        app.MapPost("/api/reconciliation-runs/{runId}/cases/bulk-accept", (string runId, BulkAcceptRequest request) =>
+        app.MapPost("/api/reconciliation-runs/{runId}/cases/bulk-accept", async (string runId, BulkAcceptRequest request, IReconciliationReviewRepository repo, CancellationToken ct) =>
         {
-            var cases = GetOrSeedRun(runId);
+            var seeded = await repo.SeedRunIfMissingAsync(runId, ct);
+            if (!seeded) return Results.NotFound();
 
-            foreach (var caseId in request.CaseIds.Distinct())
-            {
-                var idx = cases.FindIndex(x => x.CaseId == caseId);
-                if (idx < 0) continue;
-
-                var current = cases[idx];
-                cases[idx] = current with
-                {
-                    Status = "ok",
-                    Confidence = current.Confidence == "low" ? "medium" : current.Confidence,
-                    Suggestion = "Aceptar"
-                };
-            }
-
+            await repo.BulkAcceptAsync(runId, request.CaseIds, ct);
             return Results.Ok(new ActionResponseDto(true, "Casos aceptados correctamente", "in_review"));
         })
         .WithTags("Reconciliation Runs")
-        .Produces<ActionResponseDto>(StatusCodes.Status200OK);
+        .Produces<ActionResponseDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status404NotFound);
 
-        app.MapPost("/api/reconciliation-runs/{runId}/confirm", (string runId) =>
+        app.MapPost("/api/reconciliation-runs/{runId}/confirm", async (string runId, IReconciliationReviewRepository repo, CancellationToken ct) =>
         {
-            var cases = GetOrSeedRun(runId);
-            var hasPending = cases.Any(c => c.Status == "pending");
-            var hasException = cases.Any(c => c.Status == "exception");
+            var seeded = await repo.SeedRunIfMissingAsync(runId, ct);
+            if (!seeded) return Results.NotFound();
 
-            if (hasPending || hasException)
+            var result = await repo.ConfirmAsync(runId, ct);
+            if (!result.CanConfirm)
             {
                 return Results.BadRequest(new ActionResponseDto(
                     false,
                     "No se puede confirmar: todavía hay pendientes o excepciones.",
-                    "in_review"
+                    result.Status
                 ));
             }
 
@@ -98,39 +84,42 @@ public static class ReconciliationRunQueryEndpoints
         })
         .WithTags("Reconciliation Runs")
         .Produces<ActionResponseDto>(StatusCodes.Status200OK)
-        .Produces<ActionResponseDto>(StatusCodes.Status400BadRequest);
+        .Produces<ActionResponseDto>(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status404NotFound);
 
         return app;
     }
 
-    private static List<ReconciliationCaseDto> GetOrSeedRun(string runId)
+    private static ReconciliationRunDto ToDto(string runId, ReconciliationRun run)
     {
-        if (Runs.TryGetValue(runId, out var existing))
-            return existing;
+        var orderedCases = run.Cases
+            .OrderBy(x => x.DebtRowNumber)
+            .ThenBy(x => x.PaymentRowNumber)
+            .ToList();
 
-        var seeded = new List<ReconciliationCaseDto>
-        {
-            new("case-1-1", 1, 1, "C1", 1000m, 1000m, 0m, "Cliente+Monto", "ok", "high", "exact", "Mismo cliente · monto exacto · ref coincide", "Aceptar"),
-            new("case-4-3", 4, 3, "C3", 1200m, 1200m, 0m, "Cliente+Monto", "ok", "high", "exact", "Mismo cliente · monto exacto", "Aceptar"),
-            new("case-5-4", 5, 4, "C4", 700m, 700m, 0m, "Cliente+Monto", "ok", "high", "exact", "Mismo cliente · monto exacto", "Aceptar"),
-            new("case-7-6", 7, 6, "C5", 350m, 350m, 0m, "Cliente+Monto", "ok", "medium", "exact", "Cliente coincide · sin ref", "Aceptar (c/ cuidado)"),
-            new("case-2-2", 2, 2, "C1", 500m, 450m, -50m, "Monto cercano", "pending", "medium", "partial", "Pago menor · posible parcial", "Revisar parcial"),
-            new("case-6-8", 6, 8, "C2", 900m, 930m, 30m, "Monto cercano", "pending", "medium", "ambiguous", "Varias deudas posibles", "Revisar"),
-            new("case-3-5", 3, 5, "C2", 200m, 200m, 0m, "Duplicado?", "exception", "low", "duplicate", "Pago similar ya conciliado", "Excepción")
-        };
+        var cases = orderedCases
+            .Select(x => new ReconciliationCaseDto(
+                x.CaseId,
+                x.DebtRowNumber,
+                x.PaymentRowNumber,
+                x.Customer,
+                x.DebtAmount,
+                x.PaymentAmount,
+                x.Delta,
+                x.Rule,
+                x.Status,
+                x.Confidence,
+                x.MatchType,
+                x.Evidence,
+                x.Suggestion))
+            .ToList();
 
-        Runs[runId] = seeded;
-        return seeded;
-    }
-
-    private static RunSummaryDto BuildSummary(string runId, List<ReconciliationCaseDto> cases)
-    {
-        return new RunSummaryDto(
+        var summary = new RunSummaryDto(
             RunId: runId,
             CompanyId: "garcia-sa",
             CompanyName: "Alimentos Garcia SA",
             Period: "2026-03",
-            Status: "in_review",
+            Status: run.Status,
             TotalCases: cases.Count,
             ResolvedCases: cases.Count(c => c.Status is "ok" or "exception"),
             AutomaticCases: cases.Count(c => c.Status == "ok"),
@@ -141,6 +130,8 @@ public static class ReconciliationRunQueryEndpoints
             DebtsAmountTotal: 1250000m,
             PaymentsAmountTotal: 1240000m
         );
+
+        return new ReconciliationRunDto(summary, cases);
     }
 
     public sealed record BulkAcceptRequest(List<string> CaseIds);

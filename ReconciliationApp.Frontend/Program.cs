@@ -12,7 +12,7 @@ builder.Services.AddScoped<ReconciliationStore>();
 
 builder.Services.AddHttpClient<ReconciliationApiClient>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5080/");
+    client.BaseAddress = new Uri("http://localhost:5081/");
 });
 
 var app = builder.Build();

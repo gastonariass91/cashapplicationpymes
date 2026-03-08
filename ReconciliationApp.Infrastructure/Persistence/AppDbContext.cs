@@ -3,6 +3,7 @@ using ReconciliationApp.Domain.Entities.Batching;
 using ReconciliationApp.Domain.Entities.Core;
 using ReconciliationApp.Domain.Entities.Imports;
 using ReconciliationApp.Domain.Entities.Reconciliation;
+using ReconciliationApp.Domain.Entities.ReconciliationReview;
 
 namespace ReconciliationApp.Infrastructure.Persistence;
 
@@ -23,6 +24,9 @@ public sealed class AppDbContext : DbContext
 
     // Reconciliation
     public DbSet<ReconciliationMatch> ReconciliationMatches => Set<ReconciliationMatch>();
+
+    public DbSet<ReconciliationRun> ReconciliationRuns => Set<ReconciliationRun>();
+    public DbSet<ReconciliationCase> ReconciliationCases => Set<ReconciliationCase>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
