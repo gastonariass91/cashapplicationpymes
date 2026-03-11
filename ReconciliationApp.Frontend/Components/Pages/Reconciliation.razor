@@ -1,4 +1,5 @@
 @page "/reconciliation"
+@page "/reconciliation/{RunId}"
 @using Microsoft.JSInterop
 @using ReconciliationApp.Frontend.Models
 @using ReconciliationApp.Frontend.Services
@@ -165,17 +166,23 @@ else
 }
 
 @code {
+  [Parameter]
+  public string? RunId { get; set; }
+
   private DotNetObjectReference<Reconciliation>? _objRef;
   private bool CommandPaletteOpen;
-  private const string RunId = "e599ad64-fe9d-442e-845e-5595a2bb7c25";
   private string? PageToast;
 
   int ResolvedCount => Store.AutoCount + Store.ExceptionCount;
   int RunProgressPct => Store.Rows.Count == 0 ? 0 : (int)Math.Round((double)ResolvedCount / Store.Rows.Count * 100);
 
-  protected override async Task OnInitializedAsync()
+  protected override void OnInitialized()
   {
     Store.OnChange += HandleStoreChange;
+  }
+
+  protected override async Task OnParametersSetAsync()
+  {
     await ReloadRunAsync();
   }
 
@@ -190,6 +197,15 @@ else
 
   async Task ReloadRunAsync()
   {
+    Store.Selected.Clear();
+    Store.CloseDrawer();
+
+    if (string.IsNullOrWhiteSpace(RunId))
+    {
+      Store.SetLoadError("No se indicó un run de conciliación. Abrí esta pantalla desde un run específico.");
+      return;
+    }
+
     try
     {
       var dto = await ApiClient.GetRunAsync(RunId);
@@ -320,6 +336,8 @@ else
 
   async Task AcceptVisible()
   {
+    if (string.IsNullOrWhiteSpace(RunId)) return;
+
     var ids = Store.VisibleRows().Select(x => x.Key).ToList();
     if (ids.Count == 0) return;
 
@@ -333,7 +351,7 @@ else
 
   async Task AcceptOne()
   {
-    if (Store.SelectedKey is null) return;
+    if (string.IsNullOrWhiteSpace(RunId) || Store.SelectedKey is null) return;
 
     var ok = await ApiClient.AcceptCaseAsync(RunId, Store.SelectedKey);
     if (ok)
@@ -346,7 +364,7 @@ else
 
   async Task MarkException()
   {
-    if (Store.SelectedKey is null) return;
+    if (string.IsNullOrWhiteSpace(RunId) || Store.SelectedKey is null) return;
 
     var ok = await ApiClient.MarkExceptionAsync(RunId, Store.SelectedKey);
     if (ok)
