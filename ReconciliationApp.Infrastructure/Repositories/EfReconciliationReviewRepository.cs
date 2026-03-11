@@ -29,25 +29,29 @@ public sealed class EfReconciliationReviewRepository : IReconciliationReviewRepo
     public async Task<bool> SeedRunIfMissingAsync(string runId, CancellationToken ct = default)
     {
         var batchRun = await ResolveBatchRunAsync(runId, ct);
-        if (batchRun is null) return false;
+        if (batchRun is null)
+            return false;
 
-        var exists = await _db.ReconciliationRuns.AnyAsync(x => x.BatchRunId == batchRun.Id, ct);
-        if (exists) return true;
+        var existing = await _db.ReconciliationRuns
+            .FirstOrDefaultAsync(x => x.BatchRunId == batchRun.Id, ct);
 
-        var run = new ReconciliationRun(batchRun.Id);
+        if (existing is not null)
+            return true;
+
+        var reviewRun = new ReconciliationRun(batchRun.Id, BuildLegacyPublicRunId(batchRun.RunNumber));
 
         var seededCases = new List<ReconciliationCase>
         {
-            new(run.Id, "case-1-1", 1, 1, "C1", 1000m, 1000m, 0m, "Cliente+Monto", "ok", "high", "exact", "Mismo cliente · monto exacto · ref coincide", "Aceptar"),
-            new(run.Id, "case-4-3", 4, 3, "C3", 1200m, 1200m, 0m, "Cliente+Monto", "ok", "high", "exact", "Mismo cliente · monto exacto", "Aceptar"),
-            new(run.Id, "case-5-4", 5, 4, "C4", 700m, 700m, 0m, "Cliente+Monto", "ok", "high", "exact", "Mismo cliente · monto exacto", "Aceptar"),
-            new(run.Id, "case-7-6", 7, 6, "C5", 350m, 350m, 0m, "Cliente+Monto", "ok", "medium", "exact", "Cliente coincide · sin ref", "Aceptar (c/ cuidado)"),
-            new(run.Id, "case-2-2", 2, 2, "C1", 500m, 450m, -50m, "Monto cercano", "pending", "medium", "partial", "Pago menor · posible parcial", "Revisar parcial"),
-            new(run.Id, "case-6-8", 6, 8, "C2", 900m, 930m, 30m, "Monto cercano", "pending", "medium", "ambiguous", "Varias deudas posibles", "Revisar"),
-            new(run.Id, "case-3-5", 3, 5, "C2", 200m, 200m, 0m, "Duplicado?", "exception", "low", "duplicate", "Pago similar ya conciliado", "Excepción")
+            new(reviewRun.Id, "case-1-1", 1, 1, "C1", 1000m, 1000m, 0m, "Cliente+Monto", "ok", "high", "exact", "Mismo cliente · monto exacto · ref coincide", "Aceptar"),
+            new(reviewRun.Id, "case-4-3", 4, 3, "C3", 1200m, 1200m, 0m, "Cliente+Monto", "ok", "high", "exact", "Mismo cliente · monto exacto", "Aceptar"),
+            new(reviewRun.Id, "case-5-4", 5, 4, "C4", 700m, 700m, 0m, "Cliente+Monto", "ok", "high", "exact", "Mismo cliente · monto exacto", "Aceptar"),
+            new(reviewRun.Id, "case-7-6", 7, 6, "C5", 350m, 350m, 0m, "Cliente+Monto", "ok", "medium", "exact", "Cliente coincide · sin ref", "Aceptar (c/ cuidado)"),
+            new(reviewRun.Id, "case-2-2", 2, 2, "C1", 500m, 450m, -50m, "Monto cercano", "pending", "medium", "partial", "Pago menor · posible parcial", "Revisar parcial"),
+            new(reviewRun.Id, "case-6-8", 6, 8, "C2", 900m, 930m, 30m, "Monto cercano", "pending", "medium", "ambiguous", "Varias deudas posibles", "Revisar"),
+            new(reviewRun.Id, "case-3-5", 3, 5, "C2", 200m, 200m, 0m, "Duplicado?", "exception", "low", "duplicate", "Pago similar ya conciliado", "Excepción")
         };
 
-        _db.ReconciliationRuns.Add(run);
+        _db.ReconciliationRuns.Add(reviewRun);
         await _db.ReconciliationCases.AddRangeAsync(seededCases, ct);
         await _db.SaveChangesAsync(ct);
 
@@ -124,6 +128,22 @@ public sealed class EfReconciliationReviewRepository : IReconciliationReviewRepo
 
     private async Task<BatchRun?> ResolveBatchRunAsync(string runId, CancellationToken ct)
     {
+        if (Guid.TryParse(runId, out var batchRunId))
+        {
+            return await _db.BatchRuns
+                .FirstOrDefaultAsync(x => x.Id == batchRunId, ct);
+        }
+
+        var existingReviewRun = await _db.ReconciliationRuns
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.PublicRunId == runId, ct);
+
+        if (existingReviewRun is not null)
+        {
+            return await _db.BatchRuns
+                .FirstOrDefaultAsync(x => x.Id == existingReviewRun.BatchRunId, ct);
+        }
+
         var runNumber = ExtractRunNumber(runId);
         if (runNumber is null) return null;
 
@@ -141,4 +161,7 @@ public sealed class EfReconciliationReviewRepository : IReconciliationReviewRepo
 
         return int.TryParse(parts[^1], out var value) ? value : null;
     }
+
+    private static string BuildLegacyPublicRunId(int runNumber)
+        => $"run-2026-03-{runNumber:0000}";
 }

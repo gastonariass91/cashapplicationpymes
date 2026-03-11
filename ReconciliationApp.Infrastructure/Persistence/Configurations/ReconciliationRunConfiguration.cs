@@ -13,6 +13,7 @@ public sealed class ReconciliationRunConfiguration : IEntityTypeConfiguration<Re
         b.HasKey(x => x.Id);
 
         b.Property(x => x.BatchRunId).HasColumnName("batch_run_id").IsRequired();
+        b.Property(x => x.PublicRunId).HasColumnName("public_run_id").HasMaxLength(64).IsRequired();
         b.Property(x => x.Status).HasColumnName("status").HasMaxLength(32).IsRequired();
         b.Property(x => x.CreatedAt).HasColumnName("created_at").IsRequired();
         b.Property(x => x.ConfirmedAt).HasColumnName("confirmed_at");
@@ -28,5 +29,6 @@ public sealed class ReconciliationRunConfiguration : IEntityTypeConfiguration<Re
             .OnDelete(DeleteBehavior.Cascade);
 
         b.HasIndex(x => x.BatchRunId).IsUnique();
+        b.HasIndex(x => x.PublicRunId).IsUnique();
     }
 }

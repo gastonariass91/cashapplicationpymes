@@ -60,7 +60,7 @@
         <div class="rdxMetricCard">
           <div class="rdxMetricTop">
             <span class="rdxMetricLabel">Deuda</span>
-            <button type="button" class="rdxInlineLink" @onclick="OpenDebtDetail">Ver deuda</button>
+            <button type="button" class="rdxInlineLink" disabled="@(r.DebtRowNumber is null)" @onclick="OpenDebtDetail">Ver deuda</button>
           </div>
           <b class="rdxMetricValue">@ReconciliationStore.Money(r.DebtAmount)</b>
           <span class="rdxMetricHint">1 documento</span>
@@ -69,7 +69,7 @@
         <div class="rdxMetricCard">
           <div class="rdxMetricTop">
             <span class="rdxMetricLabel">Pago</span>
-            <button type="button" class="rdxInlineLink" @onclick="OpenPaymentDetail">Ver pago</button>
+            <button type="button" class="rdxInlineLink" disabled="@(r.PaymentRowNumber is null)" @onclick="OpenPaymentDetail">Ver pago</button>
           </div>
           <b class="rdxMetricValue">@ReconciliationStore.Money(r.PaymentAmount)</b>
           <span class="rdxMetricHint">1 movimiento</span>
@@ -193,7 +193,7 @@
           <tr>
             <td>@DetailModal.RecordLabel</td>
             <td>@r.Customer</td>
-            <td>#@DetailModal.RowNumber</td>
+            <td>@(DetailModal.RowNumber is int row ? $"#{row}" : "Sin fila")</td>
             <td>@ReconciliationStore.Money(DetailModal.Amount)</td>
           </tr>
         </tbody>
@@ -421,6 +421,6 @@
     string Title,
     string Subtitle,
     string RecordLabel,
-    int RowNumber,
+    int? RowNumber,
     decimal Amount);
 }

@@ -57,7 +57,7 @@
               <span class="typeBadge" title="@ReconciliationUi.TypeLabel(r.Type)">@ReconciliationUi.TypeIcon(r.Type)</span>
               <div class="caseMeta">
                 <b>@ReconciliationUi.TypeLabel(r.Type)</b>
-                <span class="cellSub mono">#@r.DebtRowNumber ↔ #@r.PaymentRowNumber</span>
+                <span class="cellSub mono">@RowPairLabel(r)</span>
               </div>
             </div>
           </td>
@@ -134,6 +134,13 @@
       ReconciliationView.Pending => "Casos que requieren criterio humano.",
       _ => "Casos descartados o marcados como excepción."
     };
+
+  string RowPairLabel(ReconciliationRow r)
+  {
+    var debt = r.DebtRowNumber is int d ? $"#{d}" : "Sin deuda";
+    var pay = r.PaymentRowNumber is int p ? $"#{p}" : "Sin pago";
+    return $"{debt} ↔ {pay}";
+  }
 
   RenderFragment SuggestionChip(ReconciliationRow r) => __builder =>
   {

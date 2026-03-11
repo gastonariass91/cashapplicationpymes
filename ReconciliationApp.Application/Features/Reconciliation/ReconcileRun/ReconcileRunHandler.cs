@@ -65,7 +65,7 @@ public sealed class ReconcileRunHandler
         await _matches.AddRangeAsync(entities, ct);
 
         var importRows = await _importRows.ListByRunIdAsync(run.Id, ct);
-        var reviewRun = new ReconciliationRun(run.Id);
+        var reviewRun = new ReconciliationRun(run.Id, BuildPublicRunId(runNumber));
         var reviewCases = BuildReviewCases(reviewRun.Id, importRows, preview);
 
         await _cases.DeleteByBatchRunIdAsync(run.Id, ct);
@@ -172,6 +172,9 @@ public sealed class ReconcileRunHandler
             .ThenBy(x => x.PaymentRowNumber ?? int.MaxValue)
             .ToList();
     }
+
+    private static string BuildPublicRunId(int runNumber)
+        => $"run-2026-03-{runNumber:0000}";
 
     private static (string customerId, decimal amount) Parse(string json)
     {

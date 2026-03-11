@@ -9,8 +9,8 @@ public enum ReconMatchType { Exact, Partial, Multi, Dup, Amb, NoMatch }
 
 public sealed record ReconciliationRow(
     string CaseId,
-    int DebtRowNumber,
-    int PaymentRowNumber,
+    int? DebtRowNumber,
+    int? PaymentRowNumber,
     string Customer,
     decimal DebtAmount,
     decimal PaymentAmount,
@@ -24,6 +24,6 @@ public sealed record ReconciliationRow(
 )
 {
     public string Key => string.IsNullOrWhiteSpace(CaseId)
-        ? $"{DebtRowNumber}-{PaymentRowNumber}"
+        ? $"{DebtRowNumber?.ToString() ?? "none"}-{PaymentRowNumber?.ToString() ?? "none"}"
         : CaseId;
 }

@@ -113,8 +113,8 @@ public sealed class ReconciliationStore
         {
             _rows.Add(new ReconciliationRow(
                 CaseId: c.CaseId,
-                DebtRowNumber: c.DebtRowNumber,
-                PaymentRowNumber: c.PaymentRowNumber,
+                DebtRowNumber: c.DebtRowNumber == 0 ? null : c.DebtRowNumber,
+                PaymentRowNumber: c.PaymentRowNumber == 0 ? null : c.PaymentRowNumber,
                 Customer: c.Customer,
                 DebtAmount: c.DebtAmount,
                 PaymentAmount: c.PaymentAmount,
