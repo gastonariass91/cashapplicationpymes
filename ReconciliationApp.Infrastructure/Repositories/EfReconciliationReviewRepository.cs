@@ -23,6 +23,8 @@ public sealed class EfReconciliationReviewRepository : IReconciliationReviewRepo
         return await _db.ReconciliationRuns
             .AsNoTracking()
             .Include(x => x.Cases)
+            .Include(x => x.BatchRun)
+                .ThenInclude(x => x.Batch)
             .FirstOrDefaultAsync(x => x.BatchRunId == batchRun.Id, ct);
     }
 

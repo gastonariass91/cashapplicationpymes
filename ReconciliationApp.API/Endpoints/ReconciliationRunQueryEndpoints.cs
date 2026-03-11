@@ -11,9 +11,6 @@ public static class ReconciliationRunQueryEndpoints
     {
         app.MapGet("/api/reconciliation-runs/{runId}", async (string runId, IReconciliationReviewRepository repo, CancellationToken ct) =>
         {
-            var ok = await repo.SeedRunIfMissingAsync(runId, ct);
-            if (!ok) return Results.NotFound();
-
             var run = await repo.GetRunAsync(runId, ct);
             if (run is null) return Results.NotFound();
 
@@ -27,9 +24,6 @@ public static class ReconciliationRunQueryEndpoints
 
         app.MapPost("/api/reconciliation-runs/{runId}/cases/{caseId}/accept", async (string runId, string caseId, IReconciliationReviewRepository repo, CancellationToken ct) =>
         {
-            var seeded = await repo.SeedRunIfMissingAsync(runId, ct);
-            if (!seeded) return Results.NotFound();
-
             var ok = await repo.AcceptCaseAsync(runId, caseId, ct);
             if (!ok) return Results.NotFound();
 
@@ -41,9 +35,6 @@ public static class ReconciliationRunQueryEndpoints
 
         app.MapPost("/api/reconciliation-runs/{runId}/cases/{caseId}/exception", async (string runId, string caseId, IReconciliationReviewRepository repo, CancellationToken ct) =>
         {
-            var seeded = await repo.SeedRunIfMissingAsync(runId, ct);
-            if (!seeded) return Results.NotFound();
-
             var ok = await repo.MarkExceptionAsync(runId, caseId, ct);
             if (!ok) return Results.NotFound();
 
@@ -55,8 +46,8 @@ public static class ReconciliationRunQueryEndpoints
 
         app.MapPost("/api/reconciliation-runs/{runId}/cases/bulk-accept", async (string runId, BulkAcceptRequest request, IReconciliationReviewRepository repo, CancellationToken ct) =>
         {
-            var seeded = await repo.SeedRunIfMissingAsync(runId, ct);
-            if (!seeded) return Results.NotFound();
+            var run = await repo.GetRunAsync(runId, ct);
+            if (run is null) return Results.NotFound();
 
             await repo.BulkAcceptAsync(runId, request.CaseIds, ct);
             return Results.Ok(new ActionResponseDto(true, "Casos aceptados correctamente", "in_review"));
@@ -67,8 +58,8 @@ public static class ReconciliationRunQueryEndpoints
 
         app.MapPost("/api/reconciliation-runs/{runId}/confirm", async (string runId, IReconciliationReviewRepository repo, CancellationToken ct) =>
         {
-            var seeded = await repo.SeedRunIfMissingAsync(runId, ct);
-            if (!seeded) return Results.NotFound();
+            var run = await repo.GetRunAsync(runId, ct);
+            if (run is null) return Results.NotFound();
 
             var result = await repo.ConfirmAsync(runId, ct);
             if (!result.CanConfirm)
@@ -120,11 +111,14 @@ public static class ReconciliationRunQueryEndpoints
         var pendingCases = cases.Count(c => c.Status == "pending");
         var exceptionCases = cases.Count(c => c.Status == "exception");
 
+        var companyId = run.BatchRun.Batch.CompanyId.ToString();
+        var period = BuildPeriodLabel(run);
+
         var summary = new RunSummaryDto(
             RunId: runId,
-            CompanyId: "garcia-sa",
+            CompanyId: companyId,
             CompanyName: "Alimentos Garcia SA",
-            Period: "2026-03",
+            Period: period,
             Status: run.Status,
             TotalCases: totalCases,
             ResolvedCases: resolvedCases,
@@ -138,6 +132,17 @@ public static class ReconciliationRunQueryEndpoints
         );
 
         return new ReconciliationRunDto(summary, cases);
+    }
+
+    private static string BuildPeriodLabel(ReconciliationRun run)
+    {
+        var from = run.BatchRun.Batch.PeriodFrom;
+        var to = run.BatchRun.Batch.PeriodTo;
+
+        if (from.Year == to.Year && from.Month == to.Month)
+            return $"{from.Year:D4}-{from.Month:D2}";
+
+        return $"{from:yyyy-MM-dd} a {to:yyyy-MM-dd}";
     }
 
     public sealed record BulkAcceptRequest(List<string> CaseIds);
