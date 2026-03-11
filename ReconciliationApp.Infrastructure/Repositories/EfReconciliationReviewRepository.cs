@@ -1,6 +1,8 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using ReconciliationApp.Application.Abstractions.Repositories;
 using ReconciliationApp.Domain.Entities.Batching;
+using ReconciliationApp.Domain.Entities.Imports;
 using ReconciliationApp.Domain.Entities.ReconciliationReview;
 using ReconciliationApp.Infrastructure.Persistence;
 
@@ -26,6 +28,50 @@ public sealed class EfReconciliationReviewRepository : IReconciliationReviewRepo
             .Include(x => x.BatchRun)
                 .ThenInclude(x => x.Batch)
             .FirstOrDefaultAsync(x => x.BatchRunId == batchRun.Id, ct);
+    }
+
+    public async Task<ReviewRunTotals?> GetRunTotalsAsync(string runId, CancellationToken ct = default)
+    {
+        var batchRun = await ResolveBatchRunAsync(runId, ct);
+        if (batchRun is null) return null;
+
+        var rows = await _db.ImportRows
+            .AsNoTracking()
+            .Where(x => x.BatchRunId == batchRun.Id)
+            .ToListAsync(ct);
+
+        var debtRows = rows.Where(x => x.Type == ImportType.Debt).ToList();
+        var paymentRows = rows.Where(x => x.Type == ImportType.Payments).ToList();
+
+        var debtsAmountTotal = debtRows.Sum(x => ExtractAmount(x.DataJson));
+        var paymentsAmountTotal = paymentRows.Sum(x => ExtractAmount(x.DataJson));
+
+        return new ReviewRunTotals(
+            DebtsRowsTotal: debtRows.Count,
+            PaymentsRowsTotal: paymentRows.Count,
+            DebtsAmountTotal: debtsAmountTotal,
+            PaymentsAmountTotal: paymentsAmountTotal
+        );
+    }
+
+    public async Task<string?> GetRunCompanyNameAsync(string runId, CancellationToken ct = default)
+    {
+        var batchRun = await ResolveBatchRunAsync(runId, ct);
+        if (batchRun is null) return null;
+
+        var companyId = await _db.BatchRuns
+            .AsNoTracking()
+            .Where(x => x.Id == batchRun.Id)
+            .Select(x => x.Batch.CompanyId)
+            .FirstOrDefaultAsync(ct);
+
+        if (companyId == Guid.Empty) return null;
+
+        return await _db.Companies
+            .AsNoTracking()
+            .Where(x => x.Id == companyId)
+            .Select(x => x.Name)
+            .FirstOrDefaultAsync(ct);
     }
 
     public async Task<bool> SeedRunIfMissingAsync(string runId, CancellationToken ct = default)
@@ -166,4 +212,22 @@ public sealed class EfReconciliationReviewRepository : IReconciliationReviewRepo
 
     private static string BuildLegacyPublicRunId(int runNumber)
         => $"run-2026-03-{runNumber:0000}";
+
+    private static decimal ExtractAmount(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        if (!root.TryGetProperty("amount", out var amountElement))
+            return 0m;
+
+        if (amountElement.ValueKind == JsonValueKind.Number)
+            return amountElement.GetDecimal();
+
+        if (amountElement.ValueKind == JsonValueKind.String &&
+            decimal.TryParse(amountElement.GetString(), out var amount))
+            return amount;
+
+        return 0m;
+    }
 }

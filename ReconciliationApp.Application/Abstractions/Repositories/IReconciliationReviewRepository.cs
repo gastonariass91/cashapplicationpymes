@@ -5,6 +5,8 @@ namespace ReconciliationApp.Application.Abstractions.Repositories;
 public interface IReconciliationReviewRepository
 {
     Task<ReconciliationRun?> GetRunAsync(string runId, CancellationToken ct = default);
+    Task<ReviewRunTotals?> GetRunTotalsAsync(string runId, CancellationToken ct = default);
+    Task<string?> GetRunCompanyNameAsync(string runId, CancellationToken ct = default);
     Task<bool> SeedRunIfMissingAsync(string runId, CancellationToken ct = default);
     Task<bool> AcceptCaseAsync(string runId, string caseId, CancellationToken ct = default);
     Task<bool> MarkExceptionAsync(string runId, string caseId, CancellationToken ct = default);

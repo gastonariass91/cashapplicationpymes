@@ -14,7 +14,13 @@ public static class ReconciliationRunQueryEndpoints
             var run = await repo.GetRunAsync(runId, ct);
             if (run is null) return Results.NotFound();
 
-            var dto = ToDto(runId, run);
+            var totals = await repo.GetRunTotalsAsync(runId, ct);
+            if (totals is null) return Results.NotFound();
+
+            var companyName = await repo.GetRunCompanyNameAsync(runId, ct);
+            if (string.IsNullOrWhiteSpace(companyName)) return Results.NotFound();
+
+            var dto = ToDto(runId, run, totals, companyName);
             return Results.Ok(dto);
         })
         .WithName("GetReconciliationRun")
@@ -81,7 +87,7 @@ public static class ReconciliationRunQueryEndpoints
         return app;
     }
 
-    private static ReconciliationRunDto ToDto(string runId, ReconciliationRun run)
+    private static ReconciliationRunDto ToDto(string runId, ReconciliationRun run, ReviewRunTotals totals, string companyName)
     {
         var orderedCases = run.Cases
             .OrderBy(x => x.DebtRowNumber)
@@ -117,7 +123,7 @@ public static class ReconciliationRunQueryEndpoints
         var summary = new RunSummaryDto(
             RunId: runId,
             CompanyId: companyId,
-            CompanyName: "Alimentos Garcia SA",
+            CompanyName: companyName,
             Period: period,
             Status: run.Status,
             TotalCases: totalCases,
@@ -125,10 +131,10 @@ public static class ReconciliationRunQueryEndpoints
             AutomaticCases: automaticCases,
             PendingCases: pendingCases,
             ExceptionCases: exceptionCases,
-            DebtsRowsTotal: 28,
-            PaymentsRowsTotal: 26,
-            DebtsAmountTotal: 1250000m,
-            PaymentsAmountTotal: 1240000m
+            DebtsRowsTotal: totals.DebtsRowsTotal,
+            PaymentsRowsTotal: totals.PaymentsRowsTotal,
+            DebtsAmountTotal: totals.DebtsAmountTotal,
+            PaymentsAmountTotal: totals.PaymentsAmountTotal
         );
 
         return new ReconciliationRunDto(summary, cases);
