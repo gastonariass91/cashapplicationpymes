@@ -14,6 +14,9 @@ public sealed class AppDbContext : DbContext
     // Core
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<User> Users => Set<User>();
+    public DbSet<Debt> Debts => Set<Debt>();
+    public DbSet<Payment> Payments => Set<Payment>();
 
     // Batching
     public DbSet<ReconciliationBatch> Batches => Set<ReconciliationBatch>();
@@ -24,7 +27,6 @@ public sealed class AppDbContext : DbContext
 
     // Reconciliation
     public DbSet<ReconciliationMatch> ReconciliationMatches => Set<ReconciliationMatch>();
-
     public DbSet<ReconciliationRun> ReconciliationRuns => Set<ReconciliationRun>();
     public DbSet<ReconciliationCase> ReconciliationCases => Set<ReconciliationCase>();
 
