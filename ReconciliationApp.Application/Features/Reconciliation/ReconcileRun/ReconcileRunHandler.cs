@@ -1,6 +1,6 @@
-using System.Text.Json;
 using ReconciliationApp.Application.Abstractions;
 using ReconciliationApp.Application.Abstractions.Repositories;
+using ReconciliationApp.Application.Features.Imports;
 using ReconciliationApp.Application.Features.Reconciliation.Preview;
 using ReconciliationApp.Domain.Entities.Imports;
 using ReconciliationApp.Domain.Entities.Reconciliation;
@@ -65,9 +65,6 @@ public sealed class ReconcileRunHandler
         await _matches.AddRangeAsync(entities, ct);
 
         var importRows = await _importRows.ListByRunIdAsync(run.Id, ct);
-
-        // PublicRunId debe ser globalmente único.
-        // Usamos el BatchRunId real, que además es el identificador que el frontend ya consume.
         var reviewRun = new ReconciliationRun(run.Id, run.Id.ToString());
         var reviewCases = BuildReviewCases(reviewRun.Id, importRows, preview);
 
@@ -95,7 +92,6 @@ public sealed class ReconcileRunHandler
         ReconcilePreview.PreviewResult preview)
     {
         var allRows = rows.ToDictionary(r => (r.Type, r.RowNumber));
-
         var result = new List<ReconciliationCase>();
 
         foreach (var match in preview.matches)
@@ -103,18 +99,18 @@ public sealed class ReconcileRunHandler
             var debt = allRows[(ImportType.Debt, match.debtRowNumber)];
             var pay = allRows[(ImportType.Payments, match.paymentRowNumber)];
 
-            var debtData = ParseDebt(debt.DataJson);
-            var payData = ParsePayment(pay.DataJson);
+            var debtData = ImportRowParser.ParseDebt(debt.DataJson);
+            var payData = ImportRowParser.ParsePayment(pay.DataJson);
 
             result.Add(new ReconciliationCase(
                 reviewRunId,
                 $"case-{match.debtRowNumber}-{match.paymentRowNumber}",
                 match.debtRowNumber,
                 match.paymentRowNumber,
-                debtData.customerId,
-                debtData.amount,
-                payData.amount,
-                payData.amount - debtData.amount,
+                debtData.CustomerId,
+                debtData.Amount,
+                payData.Amount,
+                payData.Amount - debtData.Amount,
                 "Cliente+Monto",
                 "ok",
                 "high",
@@ -127,17 +123,17 @@ public sealed class ReconcileRunHandler
         foreach (var debtRow in preview.unmatchedDebtRowNumbers)
         {
             var debt = allRows[(ImportType.Debt, debtRow)];
-            var debtData = ParseDebt(debt.DataJson);
+            var debtData = ImportRowParser.ParseDebt(debt.DataJson);
 
             result.Add(new ReconciliationCase(
                 reviewRunId,
                 $"debt-only-{debtRow}",
                 debtRow,
                 null,
-                debtData.customerId,
-                debtData.amount,
+                debtData.CustomerId,
+                debtData.Amount,
                 0m,
-                -debtData.amount,
+                -debtData.Amount,
                 "Sin match",
                 "pending",
                 "medium",
@@ -150,17 +146,17 @@ public sealed class ReconcileRunHandler
         foreach (var payRow in preview.unmatchedPaymentRowNumbers)
         {
             var pay = allRows[(ImportType.Payments, payRow)];
-            var payData = ParsePayment(pay.DataJson);
+            var payData = ImportRowParser.ParsePayment(pay.DataJson);
 
             result.Add(new ReconciliationCase(
                 reviewRunId,
                 $"pay-only-{payRow}",
                 null,
                 payRow,
-                payData.customerId,
+                payData.CustomerId,
                 0m,
-                payData.amount,
-                payData.amount,
+                payData.Amount,
+                payData.Amount,
                 "Sin match",
                 "pending",
                 "medium",
@@ -174,66 +170,5 @@ public sealed class ReconcileRunHandler
             .OrderBy(x => x.DebtRowNumber ?? int.MaxValue)
             .ThenBy(x => x.PaymentRowNumber ?? int.MaxValue)
             .ToList();
-    }
-
-    private static (string customerId, decimal amount) ParseDebt(string json)
-    {
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-
-        var customerId = GetRequiredString(root, "customer_id");
-        var amount = GetRequiredDecimal(root, "amount");
-
-        return (customerId, amount);
-    }
-
-    private static (string customerId, decimal amount) ParsePayment(string json)
-    {
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-
-        var customerId = GetOptionalString(root, "payer_tax_id")
-                      ?? GetOptionalString(root, "customer_id")
-                      ?? "";
-
-        var amount = GetRequiredDecimal(root, "amount");
-
-        return (customerId, amount);
-    }
-
-    private static string GetRequiredString(JsonElement root, string propertyName)
-    {
-        if (!root.TryGetProperty(propertyName, out var value))
-            throw new InvalidOperationException($"Missing required property '{propertyName}'.");
-
-        var result = value.GetString();
-        if (string.IsNullOrWhiteSpace(result))
-            throw new InvalidOperationException($"Property '{propertyName}' is required.");
-
-        return result.Trim();
-    }
-
-    private static string? GetOptionalString(JsonElement root, string propertyName)
-    {
-        if (!root.TryGetProperty(propertyName, out var value))
-            return null;
-
-        var result = value.GetString();
-        return string.IsNullOrWhiteSpace(result) ? null : result.Trim();
-    }
-
-    private static decimal GetRequiredDecimal(JsonElement root, string propertyName)
-    {
-        if (!root.TryGetProperty(propertyName, out var value))
-            throw new InvalidOperationException($"Missing required property '{propertyName}'.");
-
-        if (value.ValueKind == JsonValueKind.Number)
-            return value.GetDecimal();
-
-        var raw = value.GetString();
-        if (decimal.TryParse(raw, out var parsed))
-            return parsed;
-
-        throw new InvalidOperationException($"Property '{propertyName}' must be a valid decimal.");
     }
 }

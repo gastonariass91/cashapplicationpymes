@@ -1,6 +1,6 @@
-using System.Text.Json;
 using ReconciliationApp.Domain.Entities.Imports;
 using ReconciliationApp.Application.Abstractions.Repositories;
+using ReconciliationApp.Application.Features.Imports;
 using ReconciliationApp.Domain.Enums;
 
 namespace ReconciliationApp.Application.Features.Reconciliation.Preview;
@@ -39,113 +39,61 @@ public static class ReconcilePreview
         var rows = await importRows.ListByRunIdAsync(run.Id, ct);
 
         var debts = rows.Where(r => r.Type == ImportType.Debt).ToList();
-        var pays  = rows.Where(r => r.Type == ImportType.Payments).ToList();
+        var pays = rows.Where(r => r.Type == ImportType.Payments).ToList();
 
-        static (string customerId, decimal amount) ParseDebt(string json)
-        {
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-
-            var customerId = GetRequiredString(root, "customer_id");
-            var amount = GetRequiredDecimal(root, "amount");
-
-            return (customerId, amount);
-        }
-
-        static (string customerId, decimal amount) ParsePayment(string json)
-        {
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-
-            var customerId = GetOptionalString(root, "payer_tax_id")
-                          ?? GetOptionalString(root, "customer_id")
-                          ?? "";
-
-            var amount = GetRequiredDecimal(root, "amount");
-
-            return (customerId, amount);
-        }
-
-        var paymentBuckets = new Dictionary<(string, decimal), Queue<(int rowNumber, string json)>>();
+        var paymentBuckets = new Dictionary<(string, decimal), Queue<int>>();
 
         foreach (var p in pays)
         {
-            var (cid, amt) = ParsePayment(p.DataJson);
-            var key = (cid, amt);
+            var data = ImportRowParser.ParsePayment(p.DataJson);
+            var key = (data.CustomerId, data.Amount);
 
             if (!paymentBuckets.TryGetValue(key, out var q))
             {
-                q = new Queue<(int, string)>();
+                q = new Queue<int>();
                 paymentBuckets[key] = q;
             }
 
-            q.Enqueue((p.RowNumber, p.DataJson));
+            q.Enqueue(p.RowNumber);
         }
 
         var matches = new List<MatchRow>();
         var matchedDebt = new HashSet<int>();
-        var matchedPay  = new HashSet<int>();
+        var matchedPay = new HashSet<int>();
 
         foreach (var d in debts)
         {
-            var (cid, amt) = ParseDebt(d.DataJson);
-            var key = (cid, amt);
+            var data = ImportRowParser.ParseDebt(d.DataJson);
+            var key = (data.CustomerId, data.Amount);
 
             if (paymentBuckets.TryGetValue(key, out var q) && q.Count > 0)
             {
-                var pay = q.Dequeue();
-                matches.Add(new MatchRow(d.RowNumber, pay.rowNumber, cid, amt));
+                var paymentRowNumber = q.Dequeue();
+
+                matches.Add(new MatchRow(
+                    debtRowNumber: d.RowNumber,
+                    paymentRowNumber: paymentRowNumber,
+                    customerId: data.CustomerId,
+                    amount: data.Amount
+                ));
+
                 matchedDebt.Add(d.RowNumber);
-                matchedPay.Add(pay.rowNumber);
+                matchedPay.Add(paymentRowNumber);
             }
         }
 
-        var unmatchedDebt = debts.Where(d => !matchedDebt.Contains(d.RowNumber))
-                                 .Select(d => d.RowNumber)
-                                 .OrderBy(x => x)
-                                 .ToList();
+        var unmatchedDebt = debts
+            .Where(d => !matchedDebt.Contains(d.RowNumber))
+            .Select(d => d.RowNumber)
+            .OrderBy(x => x)
+            .ToList();
 
-        var unmatchedPay = pays.Where(p => !matchedPay.Contains(p.RowNumber))
-                               .Select(p => p.RowNumber)
-                               .OrderBy(x => x)
-                               .ToList();
+        var unmatchedPay = pays
+            .Where(p => !matchedPay.Contains(p.RowNumber))
+            .Select(p => p.RowNumber)
+            .OrderBy(x => x)
+            .ToList();
 
         return new PreviewResult(run.Id, matches, unmatchedDebt, unmatchedPay);
-    }
-
-    private static string GetRequiredString(JsonElement root, string propertyName)
-    {
-        if (!root.TryGetProperty(propertyName, out var value))
-            throw new InvalidOperationException($"Missing required property '{propertyName}'.");
-
-        var result = value.GetString();
-        if (string.IsNullOrWhiteSpace(result))
-            throw new InvalidOperationException($"Property '{propertyName}' is required.");
-
-        return result.Trim();
-    }
-
-    private static string? GetOptionalString(JsonElement root, string propertyName)
-    {
-        if (!root.TryGetProperty(propertyName, out var value))
-            return null;
-
-        var result = value.GetString();
-        return string.IsNullOrWhiteSpace(result) ? null : result.Trim();
-    }
-
-    private static decimal GetRequiredDecimal(JsonElement root, string propertyName)
-    {
-        if (!root.TryGetProperty(propertyName, out var value))
-            throw new InvalidOperationException($"Missing required property '{propertyName}'.");
-
-        if (value.ValueKind == JsonValueKind.Number)
-            return value.GetDecimal();
-
-        var raw = value.GetString();
-        if (decimal.TryParse(raw, out var parsed))
-            return parsed;
-
-        throw new InvalidOperationException($"Property '{propertyName}' must be a valid decimal.");
     }
 }
