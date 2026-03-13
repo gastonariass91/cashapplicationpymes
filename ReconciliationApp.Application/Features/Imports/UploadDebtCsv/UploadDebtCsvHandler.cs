@@ -48,23 +48,38 @@ public sealed class UploadDebtCsvHandler
 
         var debtsToInsert = new List<Debt>();
 
+        // Cache en memoria para no duplicar customers dentro del mismo CSV
+        var customersByKey = new Dictionary<string, Customer>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var json in jsonRows)
         {
             var row = ParseDebtRow(json);
 
-            var customer = await _customers.GetByCompanyAndCustomerKeyAsync(batch.CompanyId, row.CustomerId, ct);
-            if (customer is null)
+            if (!customersByKey.TryGetValue(row.CustomerId, out var customer))
             {
-                customer = new Customer(
-                    batch.CompanyId,
-                    row.CustomerId,
-                    row.CustomerName,
-                    row.CustomerEmail);
+                customer = await _customers.GetByCompanyAndCustomerKeyAsync(batch.CompanyId, row.CustomerId, ct);
 
-                await _customers.AddAsync(customer, ct);
+                if (customer is null)
+                {
+                    customer = new Customer(
+                        batch.CompanyId,
+                        row.CustomerId,
+                        row.CustomerName,
+                        row.CustomerEmail);
+
+                    await _customers.AddAsync(customer, ct);
+                }
+                else
+                {
+                    customer.UpdateName(row.CustomerName);
+                    customer.UpdateEmail(row.CustomerEmail);
+                }
+
+                customersByKey[row.CustomerId] = customer;
             }
             else
             {
+                // Si ya fue creado/encontrado en esta corrida, igual actualizamos datos por si vinieron distintos
                 customer.UpdateName(row.CustomerName);
                 customer.UpdateEmail(row.CustomerEmail);
             }

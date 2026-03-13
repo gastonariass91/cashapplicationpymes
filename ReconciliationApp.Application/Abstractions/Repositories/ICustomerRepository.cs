@@ -5,5 +5,6 @@ namespace ReconciliationApp.Application.Abstractions.Repositories;
 public interface ICustomerRepository
 {
     Task<Customer?> GetByCompanyAndCustomerKeyAsync(Guid companyId, string customerKey, CancellationToken ct);
+    Task<List<Customer>> ListByCompanyAsync(Guid companyId, CancellationToken ct);
     Task AddAsync(Customer customer, CancellationToken ct);
 }

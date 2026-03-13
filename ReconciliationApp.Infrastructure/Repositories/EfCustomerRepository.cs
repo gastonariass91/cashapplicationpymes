@@ -22,6 +22,15 @@ public sealed class EfCustomerRepository : ICustomerRepository
                 ct);
     }
 
+    public Task<List<Customer>> ListByCompanyAsync(Guid companyId, CancellationToken ct)
+    {
+        return _db.Customers
+            .AsNoTracking()
+            .Where(x => x.CompanyId == companyId)
+            .OrderBy(x => x.Name)
+            .ToListAsync(ct);
+    }
+
     public async Task AddAsync(Customer customer, CancellationToken ct)
     {
         await _db.Customers.AddAsync(customer, ct);

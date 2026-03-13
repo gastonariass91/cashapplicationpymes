@@ -67,6 +67,9 @@ app.UseSwaggerUI();
 // Endpoints por feature
 app.MapHealthEndpoints();
 app.MapCompanyEndpoints();
+app.MapCustomerEndpoints();
+app.MapDebtEndpoints();
+app.MapPaymentEndpoints();
 app.MapBatchEndpoints();
 app.MapImportEndpoints();
 app.MapReconciliationEndpoints();

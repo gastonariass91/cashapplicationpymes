@@ -14,6 +14,17 @@ public sealed class EfDebtRepository : IDebtRepository
         _db = db;
     }
 
+    public Task<List<Debt>> ListByCompanyAsync(Guid companyId, CancellationToken ct)
+    {
+        return _db.Debts
+            .AsNoTracking()
+            .Include(x => x.Customer)
+            .Where(x => x.CompanyId == companyId)
+            .OrderByDescending(x => x.IssueDate)
+            .ThenBy(x => x.InvoiceNumber)
+            .ToListAsync(ct);
+    }
+
     public Task DeleteBySourceBatchRunIdAsync(Guid sourceBatchRunId, CancellationToken ct)
     {
         return _db.Debts

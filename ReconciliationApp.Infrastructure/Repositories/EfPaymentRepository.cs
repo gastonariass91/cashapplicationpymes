@@ -14,6 +14,17 @@ public sealed class EfPaymentRepository : IPaymentRepository
         _db = db;
     }
 
+    public Task<List<Payment>> ListByCompanyAsync(Guid companyId, CancellationToken ct)
+    {
+        return _db.Payments
+            .AsNoTracking()
+            .Include(x => x.Customer)
+            .Where(x => x.CompanyId == companyId)
+            .OrderByDescending(x => x.PaymentDate)
+            .ThenBy(x => x.PaymentNumber)
+            .ToListAsync(ct);
+    }
+
     public Task DeleteBySourceBatchRunIdAsync(Guid sourceBatchRunId, CancellationToken ct)
     {
         return _db.Payments

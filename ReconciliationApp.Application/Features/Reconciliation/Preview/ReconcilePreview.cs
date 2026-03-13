@@ -38,35 +38,39 @@ public static class ReconcilePreview
 
         var rows = await importRows.ListByRunIdAsync(run.Id, ct);
 
-        // type 1 = Debt, type 2 = Payment (según lo que venís usando)
         var debts = rows.Where(r => r.Type == ImportType.Debt).ToList();
         var pays  = rows.Where(r => r.Type == ImportType.Payments).ToList();
 
-        static (string customerId, decimal amount) Parse(string json)
+        static (string customerId, decimal amount) ParseDebt(string json)
         {
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
-            var customerId = root.GetProperty("customer_id").GetString() ?? "";
-            var amountStr  = root.GetProperty("amount").GetString() ?? "0";
-
-            // por si viene como number en algún momento
-            decimal amount = 0;
-            if (!decimal.TryParse(amountStr, out amount))
-            {
-                if (root.GetProperty("amount").ValueKind == JsonValueKind.Number)
-                    amount = root.GetProperty("amount").GetDecimal();
-            }
+            var customerId = GetRequiredString(root, "customer_id");
+            var amount = GetRequiredDecimal(root, "amount");
 
             return (customerId, amount);
         }
 
-        // Index pagos por (customerId, amount)
+        static (string customerId, decimal amount) ParsePayment(string json)
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            var customerId = GetOptionalString(root, "payer_tax_id")
+                          ?? GetOptionalString(root, "customer_id")
+                          ?? "";
+
+            var amount = GetRequiredDecimal(root, "amount");
+
+            return (customerId, amount);
+        }
+
         var paymentBuckets = new Dictionary<(string, decimal), Queue<(int rowNumber, string json)>>();
 
         foreach (var p in pays)
         {
-            var (cid, amt) = Parse(p.DataJson);
+            var (cid, amt) = ParsePayment(p.DataJson);
             var key = (cid, amt);
 
             if (!paymentBuckets.TryGetValue(key, out var q))
@@ -74,6 +78,7 @@ public static class ReconcilePreview
                 q = new Queue<(int, string)>();
                 paymentBuckets[key] = q;
             }
+
             q.Enqueue((p.RowNumber, p.DataJson));
         }
 
@@ -83,7 +88,7 @@ public static class ReconcilePreview
 
         foreach (var d in debts)
         {
-            var (cid, amt) = Parse(d.DataJson);
+            var (cid, amt) = ParseDebt(d.DataJson);
             var key = (cid, amt);
 
             if (paymentBuckets.TryGetValue(key, out var q) && q.Count > 0)
@@ -106,5 +111,41 @@ public static class ReconcilePreview
                                .ToList();
 
         return new PreviewResult(run.Id, matches, unmatchedDebt, unmatchedPay);
+    }
+
+    private static string GetRequiredString(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var value))
+            throw new InvalidOperationException($"Missing required property '{propertyName}'.");
+
+        var result = value.GetString();
+        if (string.IsNullOrWhiteSpace(result))
+            throw new InvalidOperationException($"Property '{propertyName}' is required.");
+
+        return result.Trim();
+    }
+
+    private static string? GetOptionalString(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var value))
+            return null;
+
+        var result = value.GetString();
+        return string.IsNullOrWhiteSpace(result) ? null : result.Trim();
+    }
+
+    private static decimal GetRequiredDecimal(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var value))
+            throw new InvalidOperationException($"Missing required property '{propertyName}'.");
+
+        if (value.ValueKind == JsonValueKind.Number)
+            return value.GetDecimal();
+
+        var raw = value.GetString();
+        if (decimal.TryParse(raw, out var parsed))
+            return parsed;
+
+        throw new InvalidOperationException($"Property '{propertyName}' must be a valid decimal.");
     }
 }

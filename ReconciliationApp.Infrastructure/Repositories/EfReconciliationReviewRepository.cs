@@ -86,7 +86,7 @@ public sealed class EfReconciliationReviewRepository : IReconciliationReviewRepo
         if (existing is not null)
             return true;
 
-        var reviewRun = new ReconciliationRun(batchRun.Id, BuildLegacyPublicRunId(batchRun.RunNumber));
+        var reviewRun = new ReconciliationRun(batchRun.Id, batchRun.Id.ToString());
 
         var seededCases = new List<ReconciliationCase>
         {
@@ -171,6 +171,8 @@ public sealed class EfReconciliationReviewRepository : IReconciliationReviewRepo
 
         return await _db.ReconciliationRuns
             .Include(x => x.Cases)
+            .Include(x => x.BatchRun)
+                .ThenInclude(x => x.Batch)
             .FirstOrDefaultAsync(x => x.BatchRunId == batchRun.Id, ct);
     }
 
@@ -179,6 +181,7 @@ public sealed class EfReconciliationReviewRepository : IReconciliationReviewRepo
         if (Guid.TryParse(runId, out var batchRunId))
         {
             return await _db.BatchRuns
+                .Include(x => x.Batch)
                 .FirstOrDefaultAsync(x => x.Id == batchRunId, ct);
         }
 
@@ -189,6 +192,7 @@ public sealed class EfReconciliationReviewRepository : IReconciliationReviewRepo
         if (existingReviewRun is not null)
         {
             return await _db.BatchRuns
+                .Include(x => x.Batch)
                 .FirstOrDefaultAsync(x => x.Id == existingReviewRun.BatchRunId, ct);
         }
 
@@ -196,6 +200,7 @@ public sealed class EfReconciliationReviewRepository : IReconciliationReviewRepo
         if (runNumber is null) return null;
 
         return await _db.BatchRuns
+            .Include(x => x.Batch)
             .OrderBy(x => x.CreatedAt)
             .FirstOrDefaultAsync(x => x.RunNumber == runNumber.Value, ct);
     }
@@ -210,9 +215,6 @@ public sealed class EfReconciliationReviewRepository : IReconciliationReviewRepo
         return int.TryParse(parts[^1], out var value) ? value : null;
     }
 
-    private static string BuildLegacyPublicRunId(int runNumber)
-        => $"run-2026-03-{runNumber:0000}";
-
     private static decimal ExtractAmount(string json)
     {
         using var doc = JsonDocument.Parse(json);
@@ -224,8 +226,7 @@ public sealed class EfReconciliationReviewRepository : IReconciliationReviewRepo
         if (amountElement.ValueKind == JsonValueKind.Number)
             return amountElement.GetDecimal();
 
-        if (amountElement.ValueKind == JsonValueKind.String &&
-            decimal.TryParse(amountElement.GetString(), out var amount))
+        if (decimal.TryParse(amountElement.GetString(), out var amount))
             return amount;
 
         return 0m;

@@ -65,7 +65,10 @@ public sealed class ReconcileRunHandler
         await _matches.AddRangeAsync(entities, ct);
 
         var importRows = await _importRows.ListByRunIdAsync(run.Id, ct);
-        var reviewRun = new ReconciliationRun(run.Id, BuildPublicRunId(runNumber));
+
+        // PublicRunId debe ser globalmente único.
+        // Usamos el BatchRunId real, que además es el identificador que el frontend ya consume.
+        var reviewRun = new ReconciliationRun(run.Id, run.Id.ToString());
         var reviewCases = BuildReviewCases(reviewRun.Id, importRows, preview);
 
         await _cases.DeleteByBatchRunIdAsync(run.Id, ct);
@@ -100,8 +103,8 @@ public sealed class ReconcileRunHandler
             var debt = allRows[(ImportType.Debt, match.debtRowNumber)];
             var pay = allRows[(ImportType.Payments, match.paymentRowNumber)];
 
-            var debtData = Parse(debt.DataJson);
-            var payData = Parse(pay.DataJson);
+            var debtData = ParseDebt(debt.DataJson);
+            var payData = ParsePayment(pay.DataJson);
 
             result.Add(new ReconciliationCase(
                 reviewRunId,
@@ -124,7 +127,7 @@ public sealed class ReconcileRunHandler
         foreach (var debtRow in preview.unmatchedDebtRowNumbers)
         {
             var debt = allRows[(ImportType.Debt, debtRow)];
-            var debtData = Parse(debt.DataJson);
+            var debtData = ParseDebt(debt.DataJson);
 
             result.Add(new ReconciliationCase(
                 reviewRunId,
@@ -147,7 +150,7 @@ public sealed class ReconcileRunHandler
         foreach (var payRow in preview.unmatchedPaymentRowNumbers)
         {
             var pay = allRows[(ImportType.Payments, payRow)];
-            var payData = Parse(pay.DataJson);
+            var payData = ParsePayment(pay.DataJson);
 
             result.Add(new ReconciliationCase(
                 reviewRunId,
@@ -173,24 +176,64 @@ public sealed class ReconcileRunHandler
             .ToList();
     }
 
-    private static string BuildPublicRunId(int runNumber)
-        => $"run-2026-03-{runNumber:0000}";
-
-    private static (string customerId, decimal amount) Parse(string json)
+    private static (string customerId, decimal amount) ParseDebt(string json)
     {
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
 
-        var customerId = root.GetProperty("customer_id").GetString() ?? "";
-        var amountStr = root.GetProperty("amount").GetString() ?? "0";
-
-        decimal amount = 0m;
-        if (!decimal.TryParse(amountStr, out amount))
-        {
-            if (root.GetProperty("amount").ValueKind == JsonValueKind.Number)
-                amount = root.GetProperty("amount").GetDecimal();
-        }
+        var customerId = GetRequiredString(root, "customer_id");
+        var amount = GetRequiredDecimal(root, "amount");
 
         return (customerId, amount);
+    }
+
+    private static (string customerId, decimal amount) ParsePayment(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        var customerId = GetOptionalString(root, "payer_tax_id")
+                      ?? GetOptionalString(root, "customer_id")
+                      ?? "";
+
+        var amount = GetRequiredDecimal(root, "amount");
+
+        return (customerId, amount);
+    }
+
+    private static string GetRequiredString(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var value))
+            throw new InvalidOperationException($"Missing required property '{propertyName}'.");
+
+        var result = value.GetString();
+        if (string.IsNullOrWhiteSpace(result))
+            throw new InvalidOperationException($"Property '{propertyName}' is required.");
+
+        return result.Trim();
+    }
+
+    private static string? GetOptionalString(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var value))
+            return null;
+
+        var result = value.GetString();
+        return string.IsNullOrWhiteSpace(result) ? null : result.Trim();
+    }
+
+    private static decimal GetRequiredDecimal(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var value))
+            throw new InvalidOperationException($"Missing required property '{propertyName}'.");
+
+        if (value.ValueKind == JsonValueKind.Number)
+            return value.GetDecimal();
+
+        var raw = value.GetString();
+        if (decimal.TryParse(raw, out var parsed))
+            return parsed;
+
+        throw new InvalidOperationException($"Property '{propertyName}' must be a valid decimal.");
     }
 }
