@@ -23,6 +23,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
         services.AddScoped<ICompanyRepository, EfCompanyRepository>();
+        services.AddScoped<ICustomerRepository, EfCustomerRepository>();
+        services.AddScoped<IDebtRepository, EfDebtRepository>();
+        services.AddScoped<IPaymentRepository, EfPaymentRepository>();
         services.AddScoped<IBatchRepository, EfBatchRepository>();
         services.AddScoped<IBatchRunRepository, EfBatchRunRepository>();
         services.AddScoped<IImportRowRepository, EfImportRowRepository>();
