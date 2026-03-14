@@ -56,6 +56,15 @@ public sealed class DebtConfiguration : IEntityTypeConfiguration<Debt>
             .HasColumnName("source_batch_run_id")
             .IsRequired(false);
 
+        builder.Property(x => x.ClosedAt)
+            .HasColumnName("closed_at")
+            .IsRequired(false);
+
+        builder.Property(x => x.ClosedReason)
+            .HasColumnName("closed_reason")
+            .HasMaxLength(100)
+            .IsRequired(false);
+
         builder.Property(x => x.CreatedAt)
             .HasColumnName("created_at")
             .IsRequired();
@@ -67,6 +76,8 @@ public sealed class DebtConfiguration : IEntityTypeConfiguration<Debt>
         builder.HasIndex(x => new { x.CompanyId, x.CustomerId });
         builder.HasIndex(x => new { x.CompanyId, x.InvoiceNumber });
         builder.HasIndex(x => new { x.CompanyId, x.Status });
+        builder.HasIndex(x => new { x.CompanyId, x.CustomerId, x.InvoiceNumber })
+            .IsUnique();
 
         builder.HasOne(x => x.Company)
             .WithMany()

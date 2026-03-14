@@ -25,11 +25,36 @@ public sealed class EfDebtRepository : IDebtRepository
             .ToListAsync(ct);
     }
 
+    public Task<List<Debt>> ListOpenByCompanyAsync(Guid companyId, CancellationToken ct)
+    {
+        return _db.Debts
+            .Where(x => x.CompanyId == companyId && x.OutstandingAmount > 0m)
+            .ToListAsync(ct);
+    }
+
+    public Task<Debt?> GetByCompanyCustomerAndInvoiceAsync(
+        Guid companyId,
+        Guid customerId,
+        string invoiceNumber,
+        CancellationToken ct)
+    {
+        return _db.Debts.FirstOrDefaultAsync(
+            x => x.CompanyId == companyId
+                 && x.CustomerId == customerId
+                 && x.InvoiceNumber == invoiceNumber,
+            ct);
+    }
+
     public Task DeleteBySourceBatchRunIdAsync(Guid sourceBatchRunId, CancellationToken ct)
     {
         return _db.Debts
             .Where(x => x.SourceBatchRunId == sourceBatchRunId)
             .ExecuteDeleteAsync(ct);
+    }
+
+    public async Task AddAsync(Debt debt, CancellationToken ct)
+    {
+        await _db.Debts.AddAsync(debt, ct);
     }
 
     public async Task AddRangeAsync(IEnumerable<Debt> debts, CancellationToken ct)

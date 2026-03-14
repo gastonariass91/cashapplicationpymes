@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using ReconciliationApp.Application.Abstractions.Repositories;
-using ReconciliationApp.Application.Features.Reconciliation.ReconcileResult;
+using ReconciliationApp.Application.Features.Reconciliation.Preview;
 using ReconciliationApp.Application.Features.Reconciliation.ReconcileRun;
 
 namespace ReconciliationApp.API.Endpoints;
@@ -15,17 +16,23 @@ public static class ReconciliationEndpoints
             int runNumber,
             IBatchRepository batches,
             IBatchRunRepository batchRuns,
-            IImportRowRepository importRows,
+            IDebtRepository debts,
+            IPaymentRepository payments,
             CancellationToken ct) =>
         {
-            var res = await ReconciliationApp.Application.Features.Reconciliation.Preview.ReconcilePreview
-                .ExecuteAsync(batchId, runNumber, batches, batchRuns, importRows, ct);
+            var result = await ReconcilePreview.ExecuteAsync(
+                batchId,
+                runNumber,
+                batches,
+                batchRuns,
+                debts,
+                payments,
+                ct);
 
-            return Results.Ok(res);
+            return Results.Ok(result);
         })
-        .WithName("ReconcilePreview")
-        .WithTags("Reconciliation")
-        .WithOpenApi();
+        .WithName("PreviewReconciliation")
+        .WithTags("Reconciliation");
 
         app.MapPost("/batches/{batchId:guid}/runs/{runNumber:int}/reconcile", async (
             Guid batchId,
@@ -33,29 +40,15 @@ public static class ReconciliationEndpoints
             ReconcileRunHandler handler,
             CancellationToken ct) =>
         {
-            var res = await handler.Handle(batchId, runNumber, ct);
-            return res is null
-                ? Results.NotFound(new { message = "Run not found." })
-                : Results.Ok(res);
-        })
-        .WithName("ReconcileRun")
-        .WithTags("Reconciliation")
-        .WithOpenApi();
+            var result = await handler.Handle(batchId, runNumber, ct);
 
-        app.MapGet("/batches/{batchId:guid}/runs/{runNumber:int}/reconcile-result", async (
-            Guid batchId,
-            int runNumber,
-            ReconcileResultHandler handler,
-            CancellationToken ct) =>
-        {
-            var res = await handler.Handle(batchId, runNumber, ct);
-            return res is null
-                ? Results.NotFound(new { message = "Run not found." })
-                : Results.Ok(res);
+            if (result is null)
+                return Results.NotFound();
+
+            return Results.Ok(result);
         })
-        .WithName("ReconcileResult")
-        .WithTags("Reconciliation")
-        .WithOpenApi();
+        .WithName("RunReconciliation")
+        .WithTags("Reconciliation");
 
         return app;
     }

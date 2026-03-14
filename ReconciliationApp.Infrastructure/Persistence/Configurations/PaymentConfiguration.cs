@@ -65,7 +65,9 @@ public sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
             .HasColumnName("updated_at")
             .IsRequired();
 
-        builder.HasIndex(x => new { x.CompanyId, x.PaymentNumber });
+        builder.HasIndex(x => new { x.CompanyId, x.PaymentNumber })
+            .IsUnique();
+
         builder.HasIndex(x => new { x.CompanyId, x.PaymentDate });
         builder.HasIndex(x => new { x.CompanyId, x.PayerTaxId });
         builder.HasIndex(x => new { x.CompanyId, x.Status });

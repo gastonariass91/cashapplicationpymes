@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using ReconciliationApp.Application.Features.Imports;
+using ReconciliationApp.Application.Features.Imports.UploadCustomersCsv;
 using ReconciliationApp.Application.Features.Imports.UploadDebtCsv;
 using ReconciliationApp.Application.Features.Imports.UploadPaymentsCsv;
 
@@ -10,6 +11,20 @@ public static class ImportEndpoints
 {
     public static IEndpointRouteBuilder MapImportEndpoints(this IEndpointRouteBuilder app)
     {
+        app.MapPost("/batches/{batchId:guid}/runs/{runNumber:int}/customers-csv", async (
+            Guid batchId,
+            int runNumber,
+            UploadCsvRequest req,
+            UploadCustomersCsvHandler handler,
+            CancellationToken ct) =>
+        {
+            await handler.Handle(batchId, runNumber, req, ct);
+            return Results.NoContent();
+        })
+        .WithName("UploadCustomersCsv")
+        .WithTags("Imports")
+        .WithOpenApi();
+
         app.MapPost("/batches/{batchId:guid}/runs/{runNumber:int}/debt-csv", async (
             Guid batchId,
             int runNumber,

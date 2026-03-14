@@ -56,6 +56,13 @@ public sealed class ReconciliationApiClient
         return await response.Content.ReadFromJsonAsync<CreateRunResponseDto>(cancellationToken: ct);
     }
 
+    public async Task<bool> UploadCustomersCsvAsync(Guid batchId, int runNumber, string csv, CancellationToken ct = default)
+    {
+        var payload = new UploadCsvRequestDto(csv);
+        var response = await _http.PostAsJsonAsync($"batches/{batchId}/runs/{runNumber}/customers-csv", payload, ct);
+        return response.IsSuccessStatusCode;
+    }
+
     public async Task<bool> UploadDebtCsvAsync(Guid batchId, int runNumber, string csv, CancellationToken ct = default)
     {
         var payload = new UploadCsvRequestDto(csv);

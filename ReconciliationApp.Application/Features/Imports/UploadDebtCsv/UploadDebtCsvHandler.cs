@@ -39,17 +39,14 @@ public sealed class UploadDebtCsvHandler
         var jsonRows = CsvSimpleParser.ParseToJsonRows(req.Csv);
 
         await _importRows.DeleteByRunAndTypeAsync(runId.Value, ImportType.Debt, ct);
-        await _debts.DeleteBySourceBatchRunIdAsync(runId.Value, ct);
 
         var importRows = jsonRows.Select((json, idx) =>
             new ImportRow(runId.Value, ImportType.Debt, idx + 1, json));
 
         await _importRows.AddRangeAsync(importRows, ct);
 
-        var debtsToInsert = new List<Debt>();
-
-        // Cache en memoria para no duplicar customers dentro del mismo CSV
         var customersByKey = new Dictionary<string, Customer>(StringComparer.OrdinalIgnoreCase);
+        var snapshotKeys = new HashSet<(Guid CustomerId, string InvoiceNumber)>();
 
         foreach (var json in jsonRows)
         {
@@ -79,24 +76,56 @@ public sealed class UploadDebtCsvHandler
             }
             else
             {
-                // Si ya fue creado/encontrado en esta corrida, igual actualizamos datos por si vinieron distintos
                 customer.UpdateName(row.CustomerName);
                 customer.UpdateEmail(row.CustomerEmail);
             }
 
-            debtsToInsert.Add(new Debt(
+            snapshotKeys.Add((customer.Id, row.InvoiceNumber));
+
+            var existingDebt = await _debts.GetByCompanyCustomerAndInvoiceAsync(
                 batch.CompanyId,
                 customer.Id,
                 row.InvoiceNumber,
-                row.IssueDate,
-                row.DueDate,
-                row.Amount,
-                row.Currency,
-                row.OutstandingAmount,
-                runId.Value));
+                ct);
+
+            if (existingDebt is null)
+            {
+                var debt = new Debt(
+                    batch.CompanyId,
+                    customer.Id,
+                    row.InvoiceNumber,
+                    row.IssueDate,
+                    row.DueDate,
+                    row.Amount,
+                    row.Currency,
+                    row.OutstandingAmount,
+                    runId.Value);
+
+                await _debts.AddAsync(debt, ct);
+            }
+            else
+            {
+                existingDebt.RefreshFromSnapshot(
+                    row.IssueDate,
+                    row.DueDate,
+                    row.Amount,
+                    row.Currency,
+                    row.OutstandingAmount,
+                    runId.Value);
+            }
         }
 
-        await _debts.AddRangeAsync(debtsToInsert, ct);
+        var openDebts = await _debts.ListOpenByCompanyAsync(batch.CompanyId, ct);
+
+        foreach (var openDebt in openDebts)
+        {
+            var key = (openDebt.CustomerId, openDebt.InvoiceNumber);
+            if (!snapshotKeys.Contains(key))
+            {
+                openDebt.CloseBySnapshot();
+            }
+        }
+
         await _uow.SaveChangesAsync(ct);
     }
 

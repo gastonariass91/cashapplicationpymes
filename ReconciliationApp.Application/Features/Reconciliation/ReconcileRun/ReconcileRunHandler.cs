@@ -1,11 +1,8 @@
 using ReconciliationApp.Application.Abstractions;
 using ReconciliationApp.Application.Abstractions.Repositories;
-using ReconciliationApp.Application.Features.Imports;
 using ReconciliationApp.Application.Features.Reconciliation.Preview;
-using ReconciliationApp.Domain.Entities.Imports;
 using ReconciliationApp.Domain.Entities.Reconciliation;
 using ReconciliationApp.Domain.Entities.ReconciliationReview;
-using ReconciliationApp.Domain.Enums;
 
 namespace ReconciliationApp.Application.Features.Reconciliation.ReconcileRun;
 
@@ -13,7 +10,8 @@ public sealed class ReconcileRunHandler
 {
     private readonly IBatchRepository _batches;
     private readonly IBatchRunRepository _batchRuns;
-    private readonly IImportRowRepository _importRows;
+    private readonly IDebtRepository _debts;
+    private readonly IPaymentRepository _payments;
     private readonly IReconciliationMatchRepository _matches;
     private readonly IReconciliationCaseRepository _cases;
     private readonly IUnitOfWork _uow;
@@ -21,14 +19,16 @@ public sealed class ReconcileRunHandler
     public ReconcileRunHandler(
         IBatchRepository batches,
         IBatchRunRepository batchRuns,
-        IImportRowRepository importRows,
+        IDebtRepository debts,
+        IPaymentRepository payments,
         IReconciliationMatchRepository matches,
         IReconciliationCaseRepository cases,
         IUnitOfWork uow)
     {
         _batches = batches;
         _batchRuns = batchRuns;
-        _importRows = importRows;
+        _debts = debts;
+        _payments = payments;
         _matches = matches;
         _cases = cases;
         _uow = uow;
@@ -54,7 +54,14 @@ public sealed class ReconcileRunHandler
             );
         }
 
-        var preview = await ReconcilePreview.ExecuteAsync(batchId, runNumber, _batches, _batchRuns, _importRows, ct);
+        var preview = await ReconcilePreview.ExecuteAsync(
+            batchId,
+            runNumber,
+            _batches,
+            _batchRuns,
+            _debts,
+            _payments,
+            ct);
 
         await _matches.DeleteByRunIdAsync(run.Id, ct);
 
@@ -64,9 +71,8 @@ public sealed class ReconcileRunHandler
 
         await _matches.AddRangeAsync(entities, ct);
 
-        var importRows = await _importRows.ListByRunIdAsync(run.Id, ct);
         var reviewRun = new ReconciliationRun(run.Id, run.Id.ToString());
-        var reviewCases = BuildReviewCases(reviewRun.Id, importRows, preview);
+        var reviewCases = BuildReviewCases(reviewRun.Id, preview);
 
         await _cases.DeleteByBatchRunIdAsync(run.Id, ct);
         await _cases.AddRunAsync(reviewRun, ct);
@@ -88,29 +94,27 @@ public sealed class ReconcileRunHandler
 
     private static List<ReconciliationCase> BuildReviewCases(
         Guid reviewRunId,
-        List<ImportRow> rows,
         ReconcilePreview.PreviewResult preview)
     {
-        var allRows = rows.ToDictionary(r => (r.Type, r.RowNumber));
+        var debtsByRow = preview.debts.ToDictionary(x => x.RowNumber);
+        var paymentsByRow = preview.payments.ToDictionary(x => x.RowNumber);
+
         var result = new List<ReconciliationCase>();
 
         foreach (var match in preview.matches)
         {
-            var debt = allRows[(ImportType.Debt, match.debtRowNumber)];
-            var pay = allRows[(ImportType.Payments, match.paymentRowNumber)];
-
-            var debtData = ImportRowParser.ParseDebt(debt.DataJson);
-            var payData = ImportRowParser.ParsePayment(pay.DataJson);
+            var debt = debtsByRow[match.debtRowNumber];
+            var pay = paymentsByRow[match.paymentRowNumber];
 
             result.Add(new ReconciliationCase(
                 reviewRunId,
                 $"case-{match.debtRowNumber}-{match.paymentRowNumber}",
                 match.debtRowNumber,
                 match.paymentRowNumber,
-                debtData.CustomerId,
-                debtData.Amount,
-                payData.Amount,
-                payData.Amount - debtData.Amount,
+                debt.CustomerKey,
+                debt.OutstandingAmount,
+                pay.Amount,
+                pay.Amount - debt.OutstandingAmount,
                 "Cliente+Monto",
                 "ok",
                 "high",
@@ -122,18 +126,17 @@ public sealed class ReconcileRunHandler
 
         foreach (var debtRow in preview.unmatchedDebtRowNumbers)
         {
-            var debt = allRows[(ImportType.Debt, debtRow)];
-            var debtData = ImportRowParser.ParseDebt(debt.DataJson);
+            var debt = debtsByRow[debtRow];
 
             result.Add(new ReconciliationCase(
                 reviewRunId,
                 $"debt-only-{debtRow}",
                 debtRow,
                 null,
-                debtData.CustomerId,
-                debtData.Amount,
+                debt.CustomerKey,
+                debt.OutstandingAmount,
                 0m,
-                -debtData.Amount,
+                -debt.OutstandingAmount,
                 "Sin match",
                 "pending",
                 "medium",
@@ -145,18 +148,17 @@ public sealed class ReconcileRunHandler
 
         foreach (var payRow in preview.unmatchedPaymentRowNumbers)
         {
-            var pay = allRows[(ImportType.Payments, payRow)];
-            var payData = ImportRowParser.ParsePayment(pay.DataJson);
+            var pay = paymentsByRow[payRow];
 
             result.Add(new ReconciliationCase(
                 reviewRunId,
                 $"pay-only-{payRow}",
                 null,
                 payRow,
-                payData.CustomerId,
+                pay.CustomerKey,
                 0m,
-                payData.Amount,
-                payData.Amount,
+                pay.Amount,
+                pay.Amount,
                 "Sin match",
                 "pending",
                 "medium",

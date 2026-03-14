@@ -1,21 +1,44 @@
-using ReconciliationApp.Domain.Entities.Imports;
 using ReconciliationApp.Application.Abstractions.Repositories;
-using ReconciliationApp.Application.Features.Imports;
-using ReconciliationApp.Domain.Enums;
 
 namespace ReconciliationApp.Application.Features.Reconciliation.Preview;
 
 public static class ReconcilePreview
 {
+    public sealed record DebtPreviewRow(
+        int RowNumber,
+        Guid DebtId,
+        Guid CustomerId,
+        string CustomerKey,
+        string CustomerName,
+        string InvoiceNumber,
+        decimal Amount,
+        decimal OutstandingAmount,
+        string Currency
+    );
+
+    public sealed record PaymentPreviewRow(
+        int RowNumber,
+        Guid PaymentId,
+        Guid? CustomerId,
+        string CustomerKey,
+        decimal Amount,
+        string Currency,
+        string PaymentNumber
+    );
+
     public sealed record MatchRow(
         int debtRowNumber,
         int paymentRowNumber,
+        Guid debtId,
+        Guid paymentId,
         string customerId,
         decimal amount
     );
 
     public sealed record PreviewResult(
         Guid batchRunId,
+        IReadOnlyList<DebtPreviewRow> debts,
+        IReadOnlyList<PaymentPreviewRow> payments,
         IReadOnlyList<MatchRow> matches,
         IReadOnlyList<int> unmatchedDebtRowNumbers,
         IReadOnlyList<int> unmatchedPaymentRowNumbers
@@ -26,7 +49,8 @@ public static class ReconcilePreview
         int runNumber,
         IBatchRepository batches,
         IBatchRunRepository batchRuns,
-        IImportRowRepository importRows,
+        IDebtRepository debts,
+        IPaymentRepository payments,
         CancellationToken ct
     )
     {
@@ -36,64 +60,99 @@ public static class ReconcilePreview
         var run = await batchRuns.GetByBatchAndRunNumberAsync(batchId, runNumber, ct);
         if (run is null) throw new InvalidOperationException("Run not found.");
 
-        var rows = await importRows.ListByRunIdAsync(run.Id, ct);
+        var liveDebts = await debts.ListOpenByCompanyAsync(batch.CompanyId, ct);
+        var livePayments = await payments.ListPendingByCompanyAsync(batch.CompanyId, ct);
 
-        var debts = rows.Where(r => r.Type == ImportType.Debt).ToList();
-        var pays = rows.Where(r => r.Type == ImportType.Payments).ToList();
+        var debtRows = liveDebts
+            .OrderBy(x => x.CustomerId)
+            .ThenBy(x => x.InvoiceNumber)
+            .Select((x, idx) => new DebtPreviewRow(
+                RowNumber: idx + 1,
+                DebtId: x.Id,
+                CustomerId: x.CustomerId,
+                CustomerKey: x.Customer.CustomerKey,
+                CustomerName: x.Customer.Name,
+                InvoiceNumber: x.InvoiceNumber,
+                Amount: x.Amount,
+                OutstandingAmount: x.OutstandingAmount,
+                Currency: x.Currency
+            ))
+            .ToList();
 
-        var paymentBuckets = new Dictionary<(string, decimal), Queue<int>>();
+        var paymentRows = livePayments
+            .OrderBy(x => x.CustomerId ?? Guid.Empty)
+            .ThenBy(x => x.PaymentNumber)
+            .Select((x, idx) => new PaymentPreviewRow(
+                RowNumber: idx + 1,
+                PaymentId: x.Id,
+                CustomerId: x.CustomerId,
+                CustomerKey: x.Customer?.CustomerKey ?? x.PayerTaxId ?? "",
+                Amount: x.Amount,
+                Currency: x.Currency,
+                PaymentNumber: x.PaymentNumber
+            ))
+            .ToList();
 
-        foreach (var p in pays)
+        var paymentBuckets = new Dictionary<(Guid CustomerId, decimal Amount), Queue<PaymentPreviewRow>>();
+
+        foreach (var p in paymentRows.Where(x => x.CustomerId.HasValue))
         {
-            var data = ImportRowParser.ParsePayment(p.DataJson);
-            var key = (data.CustomerId, data.Amount);
+            var key = (p.CustomerId!.Value, p.Amount);
 
             if (!paymentBuckets.TryGetValue(key, out var q))
             {
-                q = new Queue<int>();
+                q = new Queue<PaymentPreviewRow>();
                 paymentBuckets[key] = q;
             }
 
-            q.Enqueue(p.RowNumber);
+            q.Enqueue(p);
         }
 
         var matches = new List<MatchRow>();
         var matchedDebt = new HashSet<int>();
         var matchedPay = new HashSet<int>();
 
-        foreach (var d in debts)
+        foreach (var d in debtRows)
         {
-            var data = ImportRowParser.ParseDebt(d.DataJson);
-            var key = (data.CustomerId, data.Amount);
+            var key = (d.CustomerId, d.OutstandingAmount);
 
             if (paymentBuckets.TryGetValue(key, out var q) && q.Count > 0)
             {
-                var paymentRowNumber = q.Dequeue();
+                var payment = q.Dequeue();
 
                 matches.Add(new MatchRow(
                     debtRowNumber: d.RowNumber,
-                    paymentRowNumber: paymentRowNumber,
-                    customerId: data.CustomerId,
-                    amount: data.Amount
+                    paymentRowNumber: payment.RowNumber,
+                    debtId: d.DebtId,
+                    paymentId: payment.PaymentId,
+                    customerId: d.CustomerKey,
+                    amount: d.OutstandingAmount
                 ));
 
                 matchedDebt.Add(d.RowNumber);
-                matchedPay.Add(paymentRowNumber);
+                matchedPay.Add(payment.RowNumber);
             }
         }
 
-        var unmatchedDebt = debts
+        var unmatchedDebt = debtRows
             .Where(d => !matchedDebt.Contains(d.RowNumber))
             .Select(d => d.RowNumber)
             .OrderBy(x => x)
             .ToList();
 
-        var unmatchedPay = pays
+        var unmatchedPay = paymentRows
             .Where(p => !matchedPay.Contains(p.RowNumber))
             .Select(p => p.RowNumber)
             .OrderBy(x => x)
             .ToList();
 
-        return new PreviewResult(run.Id, matches, unmatchedDebt, unmatchedPay);
+        return new PreviewResult(
+            batchRunId: run.Id,
+            debts: debtRows,
+            payments: paymentRows,
+            matches: matches,
+            unmatchedDebtRowNumbers: unmatchedDebt,
+            unmatchedPaymentRowNumbers: unmatchedPay
+        );
     }
 }

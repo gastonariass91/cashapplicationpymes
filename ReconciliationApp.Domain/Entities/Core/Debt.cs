@@ -23,6 +23,9 @@ public sealed class Debt
 
     public Guid? SourceBatchRunId { get; private set; }
 
+    public DateTimeOffset? ClosedAt { get; private set; }
+    public string? ClosedReason { get; private set; }
+
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; private set; } = DateTimeOffset.UtcNow;
 
@@ -39,17 +42,7 @@ public sealed class Debt
         decimal outstandingAmount,
         Guid? sourceBatchRunId = null)
     {
-        if (dueDate < issueDate)
-            throw new ArgumentException("DueDate must be >= IssueDate");
-
-        if (amount < 0)
-            throw new ArgumentOutOfRangeException(nameof(amount));
-
-        if (outstandingAmount < 0)
-            throw new ArgumentOutOfRangeException(nameof(outstandingAmount));
-
-        if (outstandingAmount > amount)
-            throw new ArgumentException("OutstandingAmount must be <= Amount");
+        Validate(issueDate, dueDate, amount, outstandingAmount);
 
         CompanyId = companyId;
         CustomerId = customerId;
@@ -61,7 +54,7 @@ public sealed class Debt
         OutstandingAmount = outstandingAmount;
         SourceBatchRunId = sourceBatchRunId;
 
-        Status = CalculateStatus(amount, outstandingAmount);
+        Status = CalculateStatus(Amount, OutstandingAmount);
     }
 
     public void UpdateOutstandingAmount(decimal outstandingAmount)
@@ -77,6 +70,39 @@ public sealed class Debt
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
+    public void RefreshFromSnapshot(
+        DateOnly issueDate,
+        DateOnly dueDate,
+        decimal amount,
+        string currency,
+        decimal outstandingAmount,
+        Guid? sourceBatchRunId = null)
+    {
+        Validate(issueDate, dueDate, amount, outstandingAmount);
+
+        IssueDate = issueDate;
+        DueDate = dueDate;
+        Amount = amount;
+        Currency = NormalizeCurrency(currency);
+        OutstandingAmount = outstandingAmount;
+        SourceBatchRunId = sourceBatchRunId;
+
+        ClosedAt = null;
+        ClosedReason = null;
+
+        Status = CalculateStatus(Amount, OutstandingAmount);
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void CloseBySnapshot()
+    {
+        OutstandingAmount = 0m;
+        Status = "Paid";
+        ClosedReason = "SnapshotMissing";
+        ClosedAt = DateTimeOffset.UtcNow;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
     public void MarkWrittenOff()
     {
         Status = "WrittenOff";
@@ -87,6 +113,25 @@ public sealed class Debt
     {
         Status = "Disputed";
         UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    private static void Validate(
+        DateOnly issueDate,
+        DateOnly dueDate,
+        decimal amount,
+        decimal outstandingAmount)
+    {
+        if (dueDate < issueDate)
+            throw new ArgumentException("DueDate must be >= IssueDate");
+
+        if (amount < 0)
+            throw new ArgumentOutOfRangeException(nameof(amount));
+
+        if (outstandingAmount < 0)
+            throw new ArgumentOutOfRangeException(nameof(outstandingAmount));
+
+        if (outstandingAmount > amount)
+            throw new ArgumentException("OutstandingAmount must be <= Amount");
     }
 
     private static string NormalizeRequired(string value, string paramName)

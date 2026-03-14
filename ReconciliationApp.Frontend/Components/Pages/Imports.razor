@@ -4,16 +4,12 @@
 @inject ReconciliationApiClient ApiClient
 @inject NavigationManager Navigation
 
-<PageTitle>Importaciones</PageTitle>
+<PageTitle>Imports</PageTitle>
 
 <div class="card" style="padding:24px; margin-top:16px;">
-  <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
-    <div>
-      <h2 style="margin:0 0 8px 0;">Importaciones</h2>
-      <div class="small" style="color:var(--muted);">
-        Creá un batch, generá un run, subí el CSV de deudas y el CSV de pagos, y luego ejecutá la conciliación.
-      </div>
-    </div>
+  <h2 style="margin:0;">Imports</h2>
+  <div class="small" style="color:var(--muted); margin-top:6px;">
+    Subí los CSV de customers, deuda y pagos. Luego ejecutá la conciliación.
   </div>
 </div>
 
@@ -34,55 +30,42 @@
 }
 
 <div class="card" style="padding:24px; margin-top:16px;">
-  <h3 style="margin-top:0;">1. Contexto</h3>
+  <h3 style="margin-top:0;">1. Crear sesión de importación</h3>
 
-  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
-    <div>
-      <label class="small" for="companyIdInput">CompanyId</label>
-      <input id="companyIdInput"
-             class="input"
-             style="width:100%; margin-top:6px;"
-             @bind="CompanyIdText"
-             placeholder="GUID de la empresa" />
-    </div>
+  <button class="btn primary"
+          @onclick="CreateBatchAndRunAsync"
+          disabled="@CreatingBatchAndRun">
+    @(CreatingBatchAndRun ? "Creando sesión..." : "Crear sesión")
+  </button>
 
-    <div>
-      <label class="small" for="periodFromInput">PeriodFrom</label>
-      <input id="periodFromInput"
-             class="input"
-             style="width:100%; margin-top:6px;"
-             type="date"
-             @bind="PeriodFrom" />
+  @if (BatchId is not null && RunNumber is not null)
+  {
+    <div class="small" style="margin-top:12px; color:var(--muted);">
+      Batch: <b>@BatchId</b> · Run: <b>@RunNumber</b>
     </div>
+  }
+</div>
 
-    <div>
-      <label class="small" for="periodToInput">PeriodTo</label>
-      <input id="periodToInput"
-             class="input"
-             style="width:100%; margin-top:6px;"
-             type="date"
-             @bind="PeriodTo" />
-    </div>
+<div class="card" style="padding:24px; margin-top:16px;">
+  <h3 style="margin-top:0;">2. CSV de customers</h3>
+
+  <InputFile OnChange="OnCustomersFileSelected" accept=".csv" />
+
+  <div class="small" style="margin-top:8px; color:var(--muted);">
+    @CustomersFileStatus
   </div>
 
-  <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
-    <button class="btn primary"
-            @onclick="CreateBatchAndRunAsync"
-            disabled="@(!CanCreateBatchAndRun)">
-      @(CreatingBatchAndRun ? "Creando batch y run..." : "Crear batch y run")
+  <div style="margin-top:16px;">
+    <button class="btn"
+            @onclick="UploadCustomersAsync"
+            disabled="@(!CanUploadCustomers)">
+      @(UploadingCustomers ? "Subiendo..." : "Subir CSV de customers")
     </button>
-
-    @if (BatchId is not null && RunNumber is not null)
-    {
-      <div class="small" style="color:var(--muted);">
-        Batch creado: <b>@BatchId</b> · Run: <b>@RunNumber</b>
-      </div>
-    }
   </div>
 </div>
 
 <div class="card" style="padding:24px; margin-top:16px;">
-  <h3 style="margin-top:0;">2. CSV de deudas</h3>
+  <h3 style="margin-top:0;">3. CSV de deuda</h3>
 
   <InputFile OnChange="OnDebtFileSelected" accept=".csv" />
 
@@ -94,13 +77,13 @@
     <button class="btn"
             @onclick="UploadDebtAsync"
             disabled="@(!CanUploadDebt)">
-      @(UploadingDebt ? "Subiendo deudas..." : "Subir CSV de deudas")
+      @(UploadingDebt ? "Subiendo..." : "Subir CSV de deuda")
     </button>
   </div>
 </div>
 
 <div class="card" style="padding:24px; margin-top:16px;">
-  <h3 style="margin-top:0;">3. CSV de pagos</h3>
+  <h3 style="margin-top:0;">4. CSV de pagos</h3>
 
   <InputFile OnChange="OnPaymentsFileSelected" accept=".csv" />
 
@@ -112,287 +95,302 @@
     <button class="btn"
             @onclick="UploadPaymentsAsync"
             disabled="@(!CanUploadPayments)">
-      @(UploadingPayments ? "Subiendo pagos..." : "Subir CSV de pagos")
+      @(UploadingPayments ? "Subiendo..." : "Subir CSV de pagos")
     </button>
   </div>
 </div>
 
 <div class="card" style="padding:24px; margin-top:16px;">
-  <h3 style="margin-top:0;">4. Ejecutar conciliación</h3>
+  <h3 style="margin-top:0;">5. Ejecutar conciliación</h3>
 
-  <div class="small" style="color:var(--muted);">
-    La conciliación se habilita cuando el run ya existe y ambos CSV fueron subidos correctamente.
-  </div>
-
-  <div style="margin-top:16px;">
-    <button class="btn primary"
-            @onclick="ReconcileAsync"
-            disabled="@(!CanReconcile)">
-      @(Reconciling ? "Ejecutando conciliación..." : "Ejecutar conciliación")
-    </button>
-  </div>
+  <button class="btn primary"
+          @onclick="ReconcileAsync"
+          disabled="@(!CanReconcile)">
+    @(Reconciling ? "Ejecutando..." : "Ejecutar conciliación")
+  </button>
 </div>
 
 @code {
   private const long MaxCsvSizeBytes = 5 * 1024 * 1024;
 
-  private string CompanyIdText = "";
-  private DateTime? PeriodFrom;
-  private DateTime? PeriodTo;
-
   private Guid? BatchId;
   private int? RunNumber;
 
+  private IBrowserFile? CustomersFile;
   private IBrowserFile? DebtFile;
   private IBrowserFile? PaymentsFile;
 
   private bool CreatingBatchAndRun;
+  private bool UploadingCustomers;
   private bool UploadingDebt;
   private bool UploadingPayments;
   private bool Reconciling;
 
+  private bool CustomersUploaded;
   private bool DebtUploaded;
   private bool PaymentsUploaded;
 
   private string? PageError;
   private string? PageSuccess;
 
+  private string CustomersFileStatus =>
+      CustomersUploaded ? "CSV de customers subido." :
+      CustomersFile is null ? "Seleccioná archivo." :
+      $"Archivo: {CustomersFile.Name}";
+
   private string DebtFileStatus =>
-      DebtUploaded
-          ? "CSV de deudas subido correctamente."
-          : DebtFile is null
-              ? "Todavía no seleccionaste archivo."
-              : $"Archivo seleccionado: {DebtFile.Name}";
+      DebtUploaded ? "CSV de deuda subido." :
+      DebtFile is null ? "Seleccioná archivo." :
+      $"Archivo: {DebtFile.Name}";
 
   private string PaymentsFileStatus =>
-      PaymentsUploaded
-          ? "CSV de pagos subido correctamente."
-          : PaymentsFile is null
-              ? "Todavía no seleccionaste archivo."
-              : $"Archivo seleccionado: {PaymentsFile.Name}";
+      PaymentsUploaded ? "CSV de pagos subido." :
+      PaymentsFile is null ? "Seleccioná archivo." :
+      $"Archivo: {PaymentsFile.Name}";
 
-  private bool CanCreateBatchAndRun =>
-      !CreatingBatchAndRun &&
-      BatchId is null &&
-      Guid.TryParse(CompanyIdText, out _) &&
-      PeriodFrom is not null &&
-      PeriodTo is not null;
+  private bool CanUploadCustomers =>
+      BatchId is not null && RunNumber is not null &&
+      CustomersFile is not null && !UploadingCustomers && !CustomersUploaded;
 
   private bool CanUploadDebt =>
-      !UploadingDebt &&
-      BatchId is not null &&
-      RunNumber is not null &&
-      DebtFile is not null &&
-      !DebtUploaded;
+      BatchId is not null && RunNumber is not null &&
+      DebtFile is not null && !UploadingDebt && !DebtUploaded;
 
   private bool CanUploadPayments =>
-      !UploadingPayments &&
-      BatchId is not null &&
-      RunNumber is not null &&
-      PaymentsFile is not null &&
-      !PaymentsUploaded;
+      BatchId is not null && RunNumber is not null &&
+      PaymentsFile is not null && !UploadingPayments && !PaymentsUploaded;
 
   private bool CanReconcile =>
-      !Reconciling &&
-      BatchId is not null &&
-      RunNumber is not null &&
-      DebtUploaded &&
-      PaymentsUploaded;
+      BatchId is not null && RunNumber is not null &&
+      DebtUploaded && PaymentsUploaded && !Reconciling;
 
   private async Task CreateBatchAndRunAsync()
   {
-    ClearMessages();
+      ClearMessages();
+      CreatingBatchAndRun = true;
 
-    if (!Guid.TryParse(CompanyIdText, out var companyId))
-    {
-      PageError = "El CompanyId no es un GUID válido.";
-      return;
-    }
-
-    if (PeriodFrom is null || PeriodTo is null)
-    {
-      PageError = "Completá un rango de fechas válido.";
-      return;
-    }
-
-    var periodFrom = DateOnly.FromDateTime(PeriodFrom.Value);
-    var periodTo = DateOnly.FromDateTime(PeriodTo.Value);
-
-    if (periodTo < periodFrom)
-    {
-      PageError = "PeriodTo debe ser mayor o igual que PeriodFrom.";
-      return;
-    }
-
-    CreatingBatchAndRun = true;
-
-    try
-    {
-      var batch = await ApiClient.CreateBatchAsync(companyId, periodFrom, periodTo);
-      if (batch is null)
+      try
       {
-        PageError = "No se pudo crear el batch.";
-        return;
-      }
+          // temporal: reemplazar cuando exista contexto real de company por usuario
+          var companyId = Guid.Parse("00000000-0000-0000-0000-000000000001");
 
-      var run = await ApiClient.CreateRunAsync(batch.BatchId);
-      if (run is null)
+          var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+          var batch = await ApiClient.CreateBatchAsync(companyId, today, today);
+          if (batch is null)
+          {
+              PageError = "No se pudo crear el batch.";
+              return;
+          }
+
+          var run = await ApiClient.CreateRunAsync(batch.BatchId);
+          if (run is null)
+          {
+              PageError = "No se pudo crear el run.";
+              return;
+          }
+
+          BatchId = run.BatchId;
+          RunNumber = run.RunNumber;
+
+          CustomersUploaded = false;
+          DebtUploaded = false;
+          PaymentsUploaded = false;
+
+          PageSuccess = "Sesión creada correctamente.";
+      }
+      catch (Exception ex)
       {
-        PageError = "No se pudo crear el run.";
-        return;
+          PageError = ex.Message;
       }
+      finally
+      {
+          CreatingBatchAndRun = false;
+      }
+  }
 
-      BatchId = run.BatchId;
-      RunNumber = run.RunNumber;
-      PageSuccess = $"Batch y run creados correctamente. BatchId={BatchId} · RunNumber={RunNumber}";
-    }
-    catch (Exception ex)
-    {
-      PageError = ex.Message;
-    }
-    finally
-    {
-      CreatingBatchAndRun = false;
-    }
+  private Task OnCustomersFileSelected(InputFileChangeEventArgs args)
+  {
+      CustomersFile = args.File;
+      CustomersUploaded = false;
+      ClearMessages();
+      return Task.CompletedTask;
   }
 
   private Task OnDebtFileSelected(InputFileChangeEventArgs args)
   {
-    DebtFile = args.File;
-    DebtUploaded = false;
-    ClearMessages();
-    return Task.CompletedTask;
+      DebtFile = args.File;
+      DebtUploaded = false;
+      ClearMessages();
+      return Task.CompletedTask;
   }
 
   private Task OnPaymentsFileSelected(InputFileChangeEventArgs args)
   {
-    PaymentsFile = args.File;
-    PaymentsUploaded = false;
-    ClearMessages();
-    return Task.CompletedTask;
+      PaymentsFile = args.File;
+      PaymentsUploaded = false;
+      ClearMessages();
+      return Task.CompletedTask;
+  }
+
+  private async Task UploadCustomersAsync()
+  {
+      ClearMessages();
+
+      if (BatchId is null || RunNumber is null || CustomersFile is null)
+      {
+          PageError = "Primero creá la sesión y seleccioná el CSV de customers.";
+          return;
+      }
+
+      UploadingCustomers = true;
+
+      try
+      {
+          var csv = await ReadFileAsTextAsync(CustomersFile);
+          var ok = await ApiClient.UploadCustomersCsvAsync(BatchId.Value, RunNumber.Value, csv);
+
+          if (!ok)
+          {
+              PageError = "No se pudo subir el CSV de customers.";
+              return;
+          }
+
+          CustomersUploaded = true;
+          PageSuccess = "CSV de customers subido.";
+      }
+      catch (Exception ex)
+      {
+          PageError = ex.Message;
+      }
+      finally
+      {
+          UploadingCustomers = false;
+      }
   }
 
   private async Task UploadDebtAsync()
   {
-    ClearMessages();
+      ClearMessages();
 
-    if (BatchId is null || RunNumber is null || DebtFile is null)
-    {
-      PageError = "Primero creá el batch/run y seleccioná el CSV de deudas.";
-      return;
-    }
-
-    UploadingDebt = true;
-
-    try
-    {
-      var csv = await ReadFileAsTextAsync(DebtFile);
-      var ok = await ApiClient.UploadDebtCsvAsync(BatchId.Value, RunNumber.Value, csv);
-
-      if (!ok)
+      if (BatchId is null || RunNumber is null || DebtFile is null)
       {
-        PageError = "No se pudo subir el CSV de deudas.";
-        return;
+          PageError = "Primero creá la sesión y seleccioná el CSV de deuda.";
+          return;
       }
 
-      DebtUploaded = true;
-      PageSuccess = "CSV de deudas subido correctamente.";
-    }
-    catch (Exception ex)
-    {
-      PageError = ex.Message;
-    }
-    finally
-    {
-      UploadingDebt = false;
-    }
+      UploadingDebt = true;
+
+      try
+      {
+          var csv = await ReadFileAsTextAsync(DebtFile);
+          var ok = await ApiClient.UploadDebtCsvAsync(BatchId.Value, RunNumber.Value, csv);
+
+          if (!ok)
+          {
+              PageError = "No se pudo subir el CSV de deuda.";
+              return;
+          }
+
+          DebtUploaded = true;
+          PageSuccess = "CSV de deuda subido.";
+      }
+      catch (Exception ex)
+      {
+          PageError = ex.Message;
+      }
+      finally
+      {
+          UploadingDebt = false;
+      }
   }
 
   private async Task UploadPaymentsAsync()
   {
-    ClearMessages();
+      ClearMessages();
 
-    if (BatchId is null || RunNumber is null || PaymentsFile is null)
-    {
-      PageError = "Primero creá el batch/run y seleccioná el CSV de pagos.";
-      return;
-    }
-
-    UploadingPayments = true;
-
-    try
-    {
-      var csv = await ReadFileAsTextAsync(PaymentsFile);
-      var ok = await ApiClient.UploadPaymentsCsvAsync(BatchId.Value, RunNumber.Value, csv);
-
-      if (!ok)
+      if (BatchId is null || RunNumber is null || PaymentsFile is null)
       {
-        PageError = "No se pudo subir el CSV de pagos.";
-        return;
+          PageError = "Primero creá la sesión y seleccioná el CSV de pagos.";
+          return;
       }
 
-      PaymentsUploaded = true;
-      PageSuccess = "CSV de pagos subido correctamente.";
-    }
-    catch (Exception ex)
-    {
-      PageError = ex.Message;
-    }
-    finally
-    {
-      UploadingPayments = false;
-    }
+      UploadingPayments = true;
+
+      try
+      {
+          var csv = await ReadFileAsTextAsync(PaymentsFile);
+          var ok = await ApiClient.UploadPaymentsCsvAsync(BatchId.Value, RunNumber.Value, csv);
+
+          if (!ok)
+          {
+              PageError = "No se pudo subir el CSV de pagos.";
+              return;
+          }
+
+          PaymentsUploaded = true;
+          PageSuccess = "CSV de pagos subido.";
+      }
+      catch (Exception ex)
+      {
+          PageError = ex.Message;
+      }
+      finally
+      {
+          UploadingPayments = false;
+      }
   }
 
   private async Task ReconcileAsync()
   {
-    ClearMessages();
+      ClearMessages();
 
-    if (BatchId is null || RunNumber is null)
-    {
-      PageError = "Primero creá el batch y el run.";
-      return;
-    }
-
-    if (!DebtUploaded || !PaymentsUploaded)
-    {
-      PageError = "Tenés que subir ambos CSV antes de reconciliar.";
-      return;
-    }
-
-    Reconciling = true;
-
-    try
-    {
-      var result = await ApiClient.ReconcileAsync(BatchId.Value, RunNumber.Value);
-      if (result is null)
+      if (BatchId is null || RunNumber is null)
       {
-        PageError = "No se pudo ejecutar la conciliación.";
-        return;
+          PageError = "Primero creá la sesión.";
+          return;
       }
 
-      Navigation.NavigateTo($"/reconciliation/{result.BatchRunId}");
-    }
-    catch (Exception ex)
-    {
-      PageError = ex.Message;
-    }
-    finally
-    {
-      Reconciling = false;
-    }
+      if (!DebtUploaded || !PaymentsUploaded)
+      {
+          PageError = "Tenés que subir deuda y pagos antes de conciliar.";
+          return;
+      }
+
+      Reconciling = true;
+
+      try
+      {
+          var result = await ApiClient.ReconcileAsync(BatchId.Value, RunNumber.Value);
+
+          if (result is null)
+          {
+              PageError = "No se pudo ejecutar la conciliación.";
+              return;
+          }
+
+          Navigation.NavigateTo($"/reconciliation/{result.BatchRunId}");
+      }
+      catch (Exception ex)
+      {
+          PageError = ex.Message;
+      }
+      finally
+      {
+          Reconciling = false;
+      }
   }
 
   private static async Task<string> ReadFileAsTextAsync(IBrowserFile file)
   {
-    await using var stream = file.OpenReadStream(MaxCsvSizeBytes);
-    using var reader = new StreamReader(stream);
-    return await reader.ReadToEndAsync();
+      await using var stream = file.OpenReadStream(MaxCsvSizeBytes);
+      using var reader = new StreamReader(stream);
+      return await reader.ReadToEndAsync();
   }
 
   private void ClearMessages()
   {
-    PageError = null;
-    PageSuccess = null;
+      PageError = null;
+      PageSuccess = null;
   }
 }

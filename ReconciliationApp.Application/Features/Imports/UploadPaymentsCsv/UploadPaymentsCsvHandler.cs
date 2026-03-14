@@ -39,28 +39,39 @@ public sealed class UploadPaymentsCsvHandler
         var jsonRows = CsvSimpleParser.ParseToJsonRows(req.Csv);
 
         await _importRows.DeleteByRunAndTypeAsync(runId.Value, ImportType.Payments, ct);
-        await _payments.DeleteBySourceBatchRunIdAsync(runId.Value, ct);
 
         var importRows = jsonRows.Select((json, idx) =>
             new ImportRow(runId.Value, ImportType.Payments, idx + 1, json));
 
         await _importRows.AddRangeAsync(importRows, ct);
 
-        var paymentsToInsert = new List<Payment>();
-
         foreach (var json in jsonRows)
         {
             var row = ParsePaymentRow(json);
+
+            var existingPayment = await _payments.GetByCompanyAndPaymentNumberAsync(
+                batch.CompanyId,
+                row.PaymentNumber,
+                ct);
+
+            if (existingPayment is not null)
+            {
+                continue;
+            }
 
             Guid? customerId = null;
 
             if (!string.IsNullOrWhiteSpace(row.PayerTaxId))
             {
-                var customer = await _customers.GetByCompanyAndCustomerKeyAsync(batch.CompanyId, row.PayerTaxId, ct);
+                var customer = await _customers.GetByCompanyAndCustomerKeyAsync(
+                    batch.CompanyId,
+                    row.PayerTaxId,
+                    ct);
+
                 customerId = customer?.Id;
             }
 
-            paymentsToInsert.Add(new Payment(
+            var payment = new Payment(
                 batch.CompanyId,
                 row.PaymentNumber,
                 row.PaymentDate,
@@ -69,10 +80,11 @@ public sealed class UploadPaymentsCsvHandler
                 row.Currency,
                 customerId,
                 row.PayerTaxId,
-                runId.Value));
+                runId.Value);
+
+            await _payments.AddAsync(payment, ct);
         }
 
-        await _payments.AddRangeAsync(paymentsToInsert, ct);
         await _uow.SaveChangesAsync(ct);
     }
 
