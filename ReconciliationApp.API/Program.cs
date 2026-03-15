@@ -13,6 +13,7 @@ using ReconciliationApp.Application.Features.Imports.UploadDebtCsv;
 using ReconciliationApp.Application.Features.Imports.UploadPaymentsCsv;
 using ReconciliationApp.Application.Features.Reconciliation.ReconcileRun;
 using ReconciliationApp.Application.Features.Reconciliation.ReconcileResult;
+using ReconciliationApp.Application.Features.Imports.UploadCustomersCsv;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +50,7 @@ builder.Services.AddHttpLogging(o =>
                    | HttpLoggingFields.Duration;
 });
 
+builder.Services.AddScoped<UploadCustomersCsvHandler>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -74,5 +76,6 @@ app.MapBatchEndpoints();
 app.MapImportEndpoints();
 app.MapReconciliationEndpoints();
 app.MapReconciliationRunQueryEndpoints();
+
 
 app.Run();

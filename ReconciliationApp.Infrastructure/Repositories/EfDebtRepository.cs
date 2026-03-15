@@ -28,7 +28,11 @@ public sealed class EfDebtRepository : IDebtRepository
     public Task<List<Debt>> ListOpenByCompanyAsync(Guid companyId, CancellationToken ct)
     {
         return _db.Debts
-            .Where(x => x.CompanyId == companyId && x.OutstandingAmount > 0m)
+            .AsNoTracking()
+            .Include(x => x.Customer)
+            .Where(x => x.CompanyId == companyId && x.OutstandingAmount > 0)
+            .OrderByDescending(x => x.IssueDate)
+            .ThenBy(x => x.InvoiceNumber)
             .ToListAsync(ct);
     }
 

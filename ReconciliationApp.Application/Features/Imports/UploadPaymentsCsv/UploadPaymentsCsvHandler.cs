@@ -28,7 +28,7 @@ public sealed class UploadPaymentsCsvHandler
         _uow = uow;
     }
 
-    public async Task Handle(Guid batchId, int runNumber, UploadCsvRequest req, CancellationToken ct)
+    public async Task<ImportResult> Handle(Guid batchId, int runNumber, UploadCsvRequest req, CancellationToken ct)
     {
         var runId = await _importRows.GetRunIdAsync(batchId, runNumber, ct);
         if (runId is null) throw new InvalidOperationException("Run not found.");
@@ -45,47 +45,76 @@ public sealed class UploadPaymentsCsvHandler
 
         await _importRows.AddRangeAsync(importRows, ct);
 
-        foreach (var json in jsonRows)
+        var inserted = 0;
+        var ignored = 0;
+        var errors = new List<ImportErrorDto>();
+
+        for (var i = 0; i < jsonRows.Count; i++)
         {
-            var row = ParsePaymentRow(json);
+            var rowNumber = i + 1;
 
-            var existingPayment = await _payments.GetByCompanyAndPaymentNumberAsync(
-                batch.CompanyId,
-                row.PaymentNumber,
-                ct);
-
-            if (existingPayment is not null)
+            try
             {
-                continue;
-            }
+                var row = ParsePaymentRow(jsonRows[i]);
 
-            Guid? customerId = null;
-
-            if (!string.IsNullOrWhiteSpace(row.PayerTaxId))
-            {
-                var customer = await _customers.GetByCompanyAndCustomerKeyAsync(
+                var existingPayment = await _payments.GetByCompanyAndPaymentNumberAsync(
                     batch.CompanyId,
-                    row.PayerTaxId,
+                    row.PaymentNumber,
                     ct);
 
-                customerId = customer?.Id;
+                if (existingPayment is not null)
+                {
+                    ignored++;
+                    continue;
+                }
+
+                Guid? customerId = null;
+
+                if (!string.IsNullOrWhiteSpace(row.PayerTaxId))
+                {
+                    var customer = await _customers.GetByCompanyAndCustomerKeyAsync(
+                        batch.CompanyId,
+                        row.PayerTaxId,
+                        ct);
+
+                    customerId = customer?.Id;
+                }
+
+                var payment = new Payment(
+                    batch.CompanyId,
+                    row.PaymentNumber,
+                    row.PaymentDate,
+                    row.AccountNumber,
+                    row.Amount,
+                    row.Currency,
+                    customerId,
+                    row.PayerTaxId,
+                    runId.Value);
+
+                await _payments.AddAsync(payment, ct);
+                inserted++;
             }
-
-            var payment = new Payment(
-                batch.CompanyId,
-                row.PaymentNumber,
-                row.PaymentDate,
-                row.AccountNumber,
-                row.Amount,
-                row.Currency,
-                customerId,
-                row.PayerTaxId,
-                runId.Value);
-
-            await _payments.AddAsync(payment, ct);
+            catch (Exception ex)
+            {
+                errors.Add(new ImportErrorDto(rowNumber, ex.Message));
+            }
         }
 
+        if (errors.Count > 0)
+            throw new InvalidOperationException(BuildValidationMessage("pagos", errors));
+
         await _uow.SaveChangesAsync(ct);
+
+        return new ImportResult(
+            ImportType: "payments",
+            ProcessedCount: jsonRows.Count,
+            InsertedCount: inserted,
+            UpdatedCount: 0,
+            IgnoredCount: ignored,
+            ClosedCount: 0,
+            ErrorCount: 0,
+            Errors: Array.Empty<ImportErrorDto>()
+        );
     }
 
     private static PaymentCsvRow ParsePaymentRow(string json)
@@ -137,6 +166,12 @@ public sealed class UploadPaymentsCsvHandler
             return parsed;
 
         throw new InvalidOperationException($"Property '{propertyName}' must be a valid decimal.");
+    }
+
+    private static string BuildValidationMessage(string importType, IEnumerable<ImportErrorDto> errors)
+    {
+        var details = string.Join(" | ", errors.Select(x => $"fila {x.RowNumber}: {x.Message}"));
+        return $"Errores al importar {importType}: {details}";
     }
 
     private sealed record PaymentCsvRow(

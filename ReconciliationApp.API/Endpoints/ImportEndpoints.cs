@@ -18,8 +18,8 @@ public static class ImportEndpoints
             UploadCustomersCsvHandler handler,
             CancellationToken ct) =>
         {
-            await handler.Handle(batchId, runNumber, req, ct);
-            return Results.NoContent();
+            var result = await handler.Handle(batchId, runNumber, req, ct);
+            return Results.Ok(result);
         })
         .WithName("UploadCustomersCsv")
         .WithTags("Imports")
@@ -32,8 +32,8 @@ public static class ImportEndpoints
             UploadDebtCsvHandler handler,
             CancellationToken ct) =>
         {
-            await handler.Handle(batchId, runNumber, req, ct);
-            return Results.NoContent();
+            var result = await handler.Handle(batchId, runNumber, req, ct);
+            return Results.Ok(result);
         })
         .WithName("UploadDebtCsv")
         .WithTags("Imports")
@@ -46,8 +46,8 @@ public static class ImportEndpoints
             UploadPaymentsCsvHandler handler,
             CancellationToken ct) =>
         {
-            await handler.Handle(batchId, runNumber, req, ct);
-            return Results.NoContent();
+            var result = await handler.Handle(batchId, runNumber, req, ct);
+            return Results.Ok(result);
         })
         .WithName("UploadPaymentsCsv")
         .WithTags("Imports")

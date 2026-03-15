@@ -28,7 +28,7 @@ public sealed class UploadDebtCsvHandler
         _uow = uow;
     }
 
-    public async Task Handle(Guid batchId, int runNumber, UploadCsvRequest req, CancellationToken ct)
+    public async Task<ImportResult> Handle(Guid batchId, int runNumber, UploadCsvRequest req, CancellationToken ct)
     {
         var runId = await _importRows.GetRunIdAsync(batchId, runNumber, ct);
         if (runId is null) throw new InvalidOperationException("Run not found.");
@@ -47,24 +47,40 @@ public sealed class UploadDebtCsvHandler
 
         var customersByKey = new Dictionary<string, Customer>(StringComparer.OrdinalIgnoreCase);
         var snapshotKeys = new HashSet<(Guid CustomerId, string InvoiceNumber)>();
+        var inserted = 0;
+        var updated = 0;
+        var closed = 0;
+        var errors = new List<ImportErrorDto>();
 
-        foreach (var json in jsonRows)
+        for (var i = 0; i < jsonRows.Count; i++)
         {
-            var row = ParseDebtRow(json);
+            var rowNumber = i + 1;
 
-            if (!customersByKey.TryGetValue(row.CustomerId, out var customer))
+            try
             {
-                customer = await _customers.GetByCompanyAndCustomerKeyAsync(batch.CompanyId, row.CustomerId, ct);
+                var row = ParseDebtRow(jsonRows[i]);
 
-                if (customer is null)
+                if (!customersByKey.TryGetValue(row.CustomerId, out var customer))
                 {
-                    customer = new Customer(
-                        batch.CompanyId,
-                        row.CustomerId,
-                        row.CustomerName,
-                        row.CustomerEmail);
+                    customer = await _customers.GetByCompanyAndCustomerKeyAsync(batch.CompanyId, row.CustomerId, ct);
 
-                    await _customers.AddAsync(customer, ct);
+                    if (customer is null)
+                    {
+                        customer = new Customer(
+                            batch.CompanyId,
+                            row.CustomerId,
+                            row.CustomerName,
+                            row.CustomerEmail);
+
+                        await _customers.AddAsync(customer, ct);
+                    }
+                    else
+                    {
+                        customer.UpdateName(row.CustomerName);
+                        customer.UpdateEmail(row.CustomerEmail);
+                    }
+
+                    customersByKey[row.CustomerId] = customer;
                 }
                 else
                 {
@@ -72,48 +88,51 @@ public sealed class UploadDebtCsvHandler
                     customer.UpdateEmail(row.CustomerEmail);
                 }
 
-                customersByKey[row.CustomerId] = customer;
-            }
-            else
-            {
-                customer.UpdateName(row.CustomerName);
-                customer.UpdateEmail(row.CustomerEmail);
-            }
+                snapshotKeys.Add((customer.Id, row.InvoiceNumber));
 
-            snapshotKeys.Add((customer.Id, row.InvoiceNumber));
-
-            var existingDebt = await _debts.GetByCompanyCustomerAndInvoiceAsync(
-                batch.CompanyId,
-                customer.Id,
-                row.InvoiceNumber,
-                ct);
-
-            if (existingDebt is null)
-            {
-                var debt = new Debt(
+                var existingDebt = await _debts.GetByCompanyCustomerAndInvoiceAsync(
                     batch.CompanyId,
                     customer.Id,
                     row.InvoiceNumber,
-                    row.IssueDate,
-                    row.DueDate,
-                    row.Amount,
-                    row.Currency,
-                    row.OutstandingAmount,
-                    runId.Value);
+                    ct);
 
-                await _debts.AddAsync(debt, ct);
+                if (existingDebt is null)
+                {
+                    var debt = new Debt(
+                        batch.CompanyId,
+                        customer.Id,
+                        row.InvoiceNumber,
+                        row.IssueDate,
+                        row.DueDate,
+                        row.Amount,
+                        row.Currency,
+                        row.OutstandingAmount,
+                        runId.Value);
+
+                    await _debts.AddAsync(debt, ct);
+                    inserted++;
+                }
+                else
+                {
+                    existingDebt.RefreshFromSnapshot(
+                        row.IssueDate,
+                        row.DueDate,
+                        row.Amount,
+                        row.Currency,
+                        row.OutstandingAmount,
+                        runId.Value);
+
+                    updated++;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                existingDebt.RefreshFromSnapshot(
-                    row.IssueDate,
-                    row.DueDate,
-                    row.Amount,
-                    row.Currency,
-                    row.OutstandingAmount,
-                    runId.Value);
+                errors.Add(new ImportErrorDto(rowNumber, ex.Message));
             }
         }
+
+        if (errors.Count > 0)
+            throw new InvalidOperationException(BuildValidationMessage("deuda", errors));
 
         var openDebts = await _debts.ListOpenByCompanyAsync(batch.CompanyId, ct);
 
@@ -123,10 +142,22 @@ public sealed class UploadDebtCsvHandler
             if (!snapshotKeys.Contains(key))
             {
                 openDebt.CloseBySnapshot();
+                closed++;
             }
         }
 
         await _uow.SaveChangesAsync(ct);
+
+        return new ImportResult(
+            ImportType: "debt",
+            ProcessedCount: jsonRows.Count,
+            InsertedCount: inserted,
+            UpdatedCount: updated,
+            IgnoredCount: 0,
+            ClosedCount: closed,
+            ErrorCount: 0,
+            Errors: Array.Empty<ImportErrorDto>()
+        );
     }
 
     private static DebtCsvRow ParseDebtRow(string json)
@@ -181,6 +212,12 @@ public sealed class UploadDebtCsvHandler
             return parsed;
 
         throw new InvalidOperationException($"Property '{propertyName}' must be a valid decimal.");
+    }
+
+    private static string BuildValidationMessage(string importType, IEnumerable<ImportErrorDto> errors)
+    {
+        var details = string.Join(" | ", errors.Select(x => $"fila {x.RowNumber}: {x.Message}"));
+        return $"Errores al importar {importType}: {details}";
     }
 
     private sealed record DebtCsvRow(

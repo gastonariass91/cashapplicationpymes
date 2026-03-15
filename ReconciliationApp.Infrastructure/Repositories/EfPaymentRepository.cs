@@ -28,8 +28,13 @@ public sealed class EfPaymentRepository : IPaymentRepository
     public Task<List<Payment>> ListPendingByCompanyAsync(Guid companyId, CancellationToken ct)
     {
         return _db.Payments
-            .Where(x => x.CompanyId == companyId &&
-                        (x.Status == "Available" || x.Status == "Unidentified" || x.Status == "PartiallyApplied"))
+            .AsNoTracking()
+            .Include(x => x.Customer)
+            .Where(x =>
+                x.CompanyId == companyId &&
+                (x.Status == "Available" || x.Status == "Unidentified" || x.Status == "PartiallyApplied"))
+            .OrderByDescending(x => x.PaymentDate)
+            .ThenBy(x => x.PaymentNumber)
             .ToListAsync(ct);
     }
 

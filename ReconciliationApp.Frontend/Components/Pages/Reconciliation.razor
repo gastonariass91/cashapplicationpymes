@@ -1,6 +1,7 @@
 @page "/reconciliation"
 @page "/reconciliation/{RunId}"
 @using Microsoft.JSInterop
+@using ReconciliationApp.Frontend.Contracts.Reconciliation
 @using ReconciliationApp.Frontend.Models
 @using ReconciliationApp.Frontend.Services
 @using ReconciliationApp.Frontend.State
@@ -20,8 +21,8 @@
 else if (!string.IsNullOrWhiteSpace(Store.LoadError))
 {
   <div class="card" style="padding:24px; margin-top:16px; border:1px solid rgba(239,68,68,.30);">
-    <b>Error al cargar conciliación</b>
-    <div style="margin-top:8px; color:var(--muted);">@Store.LoadError</div>
+    <b>@LoadErrorTitle</b>
+    <div style="margin-top:8px; color:var(--muted);">@LoadErrorMessage</div>
   </div>
 }
 else
@@ -146,7 +147,6 @@ else
                        ToggleAllRequested="ToggleAll"
                        ToggleOneRequested="ToggleOne"
                        OpenDrawerRequested="OpenDrawer" />
-
 </div>
 
 <ReconciliationDrawer Store="Store"
@@ -172,6 +172,24 @@ else
   private DotNetObjectReference<Reconciliation>? _objRef;
   private bool CommandPaletteOpen;
   private string? PageToast;
+
+  private static readonly Guid DefaultCompanyId = Guid.Parse("77e3c972-1323-40c2-ba1e-044723bc4c00");
+
+  private string? EffectiveRunId =>
+      !string.IsNullOrWhiteSpace(RunId) ? RunId : Store.RunId;
+
+  private string LoadErrorTitle =>
+      IsNoDataError ? "Todavía no hay conciliaciones disponibles" : "Error al cargar conciliación";
+
+  private string LoadErrorMessage =>
+      IsNoDataError
+          ? "Subí deuda o pagos desde Imports para generar la primera conciliación."
+          : Store.LoadError ?? "";
+
+  private bool IsNoDataError =>
+      !string.IsNullOrWhiteSpace(Store.LoadError) &&
+      (Store.LoadError.Contains("404") ||
+       Store.LoadError.Contains("No hay una conciliación actual disponible", StringComparison.OrdinalIgnoreCase));
 
   int ResolvedCount => Store.AutoCount + Store.ExceptionCount;
   int RunProgressPct => Store.Rows.Count == 0 ? 0 : (int)Math.Round((double)ResolvedCount / Store.Rows.Count * 100);
@@ -200,19 +218,27 @@ else
     Store.Selected.Clear();
     Store.CloseDrawer();
 
-    if (string.IsNullOrWhiteSpace(RunId))
-    {
-      Store.SetLoadError("No se indicó un run de conciliación. Abrí esta pantalla desde un run específico.");
-      return;
-    }
-
     try
     {
-      var dto = await ApiClient.GetRunAsync(RunId);
-      if (dto is null)
+      ApiReconciliationRunDto? dto;
+
+      if (string.IsNullOrWhiteSpace(RunId))
       {
-        Store.SetLoadError("La API devolvió una respuesta vacía.");
-        return;
+        dto = await ApiClient.GetCurrentRunAsync(DefaultCompanyId);
+        if (dto is null)
+        {
+          Store.SetLoadError("No hay una conciliación actual disponible para esta company.");
+          return;
+        }
+      }
+      else
+      {
+        dto = await ApiClient.GetRunAsync(RunId);
+        if (dto is null)
+        {
+          Store.SetLoadError("La API devolvió una respuesta vacía.");
+          return;
+        }
       }
 
       Store.LoadFromApi(dto);
@@ -336,12 +362,13 @@ else
 
   async Task AcceptVisible()
   {
-    if (string.IsNullOrWhiteSpace(RunId)) return;
+    var runId = EffectiveRunId;
+    if (string.IsNullOrWhiteSpace(runId)) return;
 
     var ids = Store.VisibleRows().Select(x => x.Key).ToList();
     if (ids.Count == 0) return;
 
-    var ok = await ApiClient.BulkAcceptAsync(RunId, ids);
+    var ok = await ApiClient.BulkAcceptAsync(runId, ids);
     if (ok)
     {
       await ReloadRunAsync();
@@ -351,9 +378,10 @@ else
 
   async Task AcceptOne()
   {
-    if (string.IsNullOrWhiteSpace(RunId) || Store.SelectedKey is null) return;
+    var runId = EffectiveRunId;
+    if (string.IsNullOrWhiteSpace(runId) || Store.SelectedKey is null) return;
 
-    var ok = await ApiClient.AcceptCaseAsync(RunId, Store.SelectedKey);
+    var ok = await ApiClient.AcceptCaseAsync(runId, Store.SelectedKey);
     if (ok)
     {
       await ReloadRunAsync();
@@ -364,9 +392,10 @@ else
 
   async Task MarkException()
   {
-    if (string.IsNullOrWhiteSpace(RunId) || Store.SelectedKey is null) return;
+    var runId = EffectiveRunId;
+    if (string.IsNullOrWhiteSpace(runId) || Store.SelectedKey is null) return;
 
-    var ok = await ApiClient.MarkExceptionAsync(RunId, Store.SelectedKey);
+    var ok = await ApiClient.MarkExceptionAsync(runId, Store.SelectedKey);
     if (ok)
     {
       await ReloadRunAsync();

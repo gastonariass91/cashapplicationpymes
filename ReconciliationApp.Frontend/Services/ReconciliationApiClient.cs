@@ -8,6 +8,22 @@ public sealed record CreateBatchResponseDto(Guid BatchId, Guid CompanyId, DateOn
 public sealed record CreateRunResponseDto(Guid BatchId, int RunNumber, DateTimeOffset CreatedAt);
 public sealed record UploadCsvRequestDto(string Csv);
 
+public sealed record ImportErrorDto(
+    int RowNumber,
+    string Message
+);
+
+public sealed record ImportResultDto(
+    string ImportType,
+    int ProcessedCount,
+    int InsertedCount,
+    int UpdatedCount,
+    int IgnoredCount,
+    int ClosedCount,
+    int ErrorCount,
+    IReadOnlyList<ImportErrorDto> Errors
+);
+
 public sealed record ReconcileMatchResponseDto(
     int DebtRowNumber,
     int PaymentRowNumber,
@@ -56,25 +72,31 @@ public sealed class ReconciliationApiClient
         return await response.Content.ReadFromJsonAsync<CreateRunResponseDto>(cancellationToken: ct);
     }
 
-    public async Task<bool> UploadCustomersCsvAsync(Guid batchId, int runNumber, string csv, CancellationToken ct = default)
+    public async Task<ImportResultDto?> UploadCustomersCsvAsync(Guid batchId, int runNumber, string csv, CancellationToken ct = default)
     {
         var payload = new UploadCsvRequestDto(csv);
         var response = await _http.PostAsJsonAsync($"batches/{batchId}/runs/{runNumber}/customers-csv", payload, ct);
-        return response.IsSuccessStatusCode;
+        if (!response.IsSuccessStatusCode) return null;
+
+        return await response.Content.ReadFromJsonAsync<ImportResultDto>(cancellationToken: ct);
     }
 
-    public async Task<bool> UploadDebtCsvAsync(Guid batchId, int runNumber, string csv, CancellationToken ct = default)
+    public async Task<ImportResultDto?> UploadDebtCsvAsync(Guid batchId, int runNumber, string csv, CancellationToken ct = default)
     {
         var payload = new UploadCsvRequestDto(csv);
         var response = await _http.PostAsJsonAsync($"batches/{batchId}/runs/{runNumber}/debt-csv", payload, ct);
-        return response.IsSuccessStatusCode;
+        if (!response.IsSuccessStatusCode) return null;
+
+        return await response.Content.ReadFromJsonAsync<ImportResultDto>(cancellationToken: ct);
     }
 
-    public async Task<bool> UploadPaymentsCsvAsync(Guid batchId, int runNumber, string csv, CancellationToken ct = default)
+    public async Task<ImportResultDto?> UploadPaymentsCsvAsync(Guid batchId, int runNumber, string csv, CancellationToken ct = default)
     {
         var payload = new UploadCsvRequestDto(csv);
         var response = await _http.PostAsJsonAsync($"batches/{batchId}/runs/{runNumber}/payments-csv", payload, ct);
-        return response.IsSuccessStatusCode;
+        if (!response.IsSuccessStatusCode) return null;
+
+        return await response.Content.ReadFromJsonAsync<ImportResultDto>(cancellationToken: ct);
     }
 
     public async Task<ReconcileRunResponseDto?> ReconcileAsync(Guid batchId, int runNumber, CancellationToken ct = default)
@@ -89,6 +111,14 @@ public sealed class ReconciliationApiClient
     {
         return await _http.GetFromJsonAsync<ApiReconciliationRunDto>(
             $"api/reconciliation-runs/{runId}",
+            cancellationToken: ct
+        );
+    }
+
+    public async Task<ApiReconciliationRunDto?> GetCurrentRunAsync(Guid companyId, CancellationToken ct = default)
+    {
+        return await _http.GetFromJsonAsync<ApiReconciliationRunDto>(
+            $"api/companies/{companyId}/reconciliation/current",
             cancellationToken: ct
         );
     }

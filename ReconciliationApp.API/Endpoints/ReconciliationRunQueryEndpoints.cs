@@ -28,6 +28,28 @@ public static class ReconciliationRunQueryEndpoints
         .Produces<ReconciliationRunDto>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status404NotFound);
 
+        app.MapGet("/api/companies/{companyId:guid}/reconciliation/current", async (
+            Guid companyId,
+            IReconciliationReviewRepository repo,
+            CancellationToken ct) =>
+        {
+            var run = await repo.GetCurrentRunAsync(companyId, ct);
+            if (run is null) return Results.NotFound();
+
+            var totals = await repo.GetCurrentRunTotalsAsync(companyId, ct);
+            if (totals is null) return Results.NotFound();
+
+            var companyName = await repo.GetCompanyNameAsync(companyId, ct);
+            if (string.IsNullOrWhiteSpace(companyName)) return Results.NotFound();
+
+            var dto = ToDto(run.BatchRunId.ToString(), run, totals, companyName);
+            return Results.Ok(dto);
+        })
+        .WithName("GetCurrentReconciliationRun")
+        .WithTags("Reconciliation Runs")
+        .Produces<ReconciliationRunDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status404NotFound);
+
         app.MapPost("/api/reconciliation-runs/{runId}/cases/{caseId}/accept", async (string runId, string caseId, IReconciliationReviewRepository repo, CancellationToken ct) =>
         {
             var ok = await repo.AcceptCaseAsync(runId, caseId, ct);

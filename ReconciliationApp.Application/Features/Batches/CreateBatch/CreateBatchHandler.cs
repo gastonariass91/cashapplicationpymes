@@ -26,8 +26,20 @@ public sealed class CreateBatchHandler
         if (company is null)
             throw new InvalidOperationException("Company not found.");
 
-        if (await _batches.ExistsForPeriodAsync(command.CompanyId, command.PeriodFrom, command.PeriodTo, ct))
-            throw new InvalidOperationException("A batch already exists for this period.");
+        var existingBatch = await _batches.GetByCompanyAndPeriodAsync(
+            command.CompanyId,
+            command.PeriodFrom,
+            command.PeriodTo,
+            ct);
+
+        if (existingBatch is not null)
+        {
+            return new CreateBatchResult(
+                existingBatch.Id,
+                existingBatch.CompanyId,
+                existingBatch.PeriodFrom,
+                existingBatch.PeriodTo);
+        }
 
         var batch = new ReconciliationBatch(command.CompanyId, command.PeriodFrom, command.PeriodTo);
 

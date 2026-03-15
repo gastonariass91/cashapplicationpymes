@@ -1,8 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ReconciliationApp.Application.Abstractions.Repositories;
-using ReconciliationApp.Application.Features.Imports;
 using ReconciliationApp.Domain.Entities.Batching;
-using ReconciliationApp.Domain.Entities.Imports;
 using ReconciliationApp.Domain.Entities.ReconciliationReview;
 using ReconciliationApp.Infrastructure.Persistence;
 
@@ -35,20 +33,7 @@ public sealed class EfReconciliationReviewRepository : IReconciliationReviewRepo
         var batchRun = await ResolveBatchRunAsync(runId, ct);
         if (batchRun is null) return null;
 
-        var rows = await _db.ImportRows
-            .AsNoTracking()
-            .Where(x => x.BatchRunId == batchRun.Id)
-            .ToListAsync(ct);
-
-        var debtRows = rows.Where(x => x.Type == ImportType.Debt).ToList();
-        var paymentRows = rows.Where(x => x.Type == ImportType.Payments).ToList();
-
-        return new ReviewRunTotals(
-            DebtsRowsTotal: debtRows.Count,
-            PaymentsRowsTotal: paymentRows.Count,
-            DebtsAmountTotal: debtRows.Sum(x => ImportRowParser.ExtractAmount(x.DataJson)),
-            PaymentsAmountTotal: paymentRows.Sum(x => ImportRowParser.ExtractAmount(x.DataJson))
-        );
+        return await BuildLiveTotalsAsync(batchRun.Batch.CompanyId, ct);
     }
 
     public async Task<string?> GetRunCompanyNameAsync(string runId, CancellationToken ct = default)
@@ -56,14 +41,28 @@ public sealed class EfReconciliationReviewRepository : IReconciliationReviewRepo
         var batchRun = await ResolveBatchRunAsync(runId, ct);
         if (batchRun is null) return null;
 
-        var companyId = await _db.BatchRuns
+        return await GetCompanyNameAsync(batchRun.Batch.CompanyId, ct);
+    }
+
+    public async Task<ReconciliationRun?> GetCurrentRunAsync(Guid companyId, CancellationToken ct = default)
+    {
+        return await _db.ReconciliationRuns
             .AsNoTracking()
-            .Where(x => x.Id == batchRun.Id)
-            .Select(x => x.Batch.CompanyId)
+            .Include(x => x.Cases)
+            .Include(x => x.BatchRun)
+                .ThenInclude(x => x.Batch)
+            .Where(x => x.BatchRun.Batch.CompanyId == companyId)
+            .OrderByDescending(x => x.BatchRun.CreatedAt)
             .FirstOrDefaultAsync(ct);
+    }
 
-        if (companyId == Guid.Empty) return null;
+    public async Task<ReviewRunTotals?> GetCurrentRunTotalsAsync(Guid companyId, CancellationToken ct = default)
+    {
+        return await BuildLiveTotalsAsync(companyId, ct);
+    }
 
+    public async Task<string?> GetCompanyNameAsync(Guid companyId, CancellationToken ct = default)
+    {
         return await _db.Companies
             .AsNoTracking()
             .Where(x => x.Id == companyId)
@@ -127,6 +126,27 @@ public sealed class EfReconciliationReviewRepository : IReconciliationReviewRepo
         run.Confirm();
         await _db.SaveChangesAsync(ct);
         return (true, run.Status);
+    }
+
+    private async Task<ReviewRunTotals> BuildLiveTotalsAsync(Guid companyId, CancellationToken ct)
+    {
+        var debts = await _db.Debts
+            .AsNoTracking()
+            .Where(x => x.CompanyId == companyId && x.OutstandingAmount > 0)
+            .ToListAsync(ct);
+
+        var payments = await _db.Payments
+            .AsNoTracking()
+            .Where(x => x.CompanyId == companyId &&
+                        (x.Status == "Available" || x.Status == "Unidentified" || x.Status == "PartiallyApplied"))
+            .ToListAsync(ct);
+
+        return new ReviewRunTotals(
+            DebtsRowsTotal: debts.Count,
+            PaymentsRowsTotal: payments.Count,
+            DebtsAmountTotal: debts.Sum(x => x.OutstandingAmount),
+            PaymentsAmountTotal: payments.Sum(x => x.Amount)
+        );
     }
 
     private async Task<ReconciliationRun?> GetTrackedRunAsync(string runId, CancellationToken ct)
