@@ -6,29 +6,12 @@ using ReconciliationApp.API.Observability;
 using ReconciliationApp.API.Validation;
 using ReconciliationApp.Application.DependencyInjection;
 using ReconciliationApp.Infrastructure.DependencyInjection;
-using ReconciliationApp.Application.Features.Batches.CreateBatch;
-using ReconciliationApp.Application.Features.Batches.CreateRun;
-using ReconciliationApp.Application.Features.Companies.CreateCompany;
-using ReconciliationApp.Application.Features.Imports.UploadDebtCsv;
-using ReconciliationApp.Application.Features.Imports.UploadPaymentsCsv;
-using ReconciliationApp.Application.Features.Reconciliation.ReconcileRun;
-using ReconciliationApp.Application.Features.Reconciliation.ReconcileResult;
-using ReconciliationApp.Application.Features.Imports.UploadCustomersCsv;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// DI modular
+// DI modular — handlers registrados dentro de AddApplication()
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-
-// Handlers
-builder.Services.AddScoped<CreateCompanyHandler>();
-builder.Services.AddScoped<CreateBatchHandler>();
-builder.Services.AddScoped<CreateRunHandler>();
-builder.Services.AddScoped<UploadDebtCsvHandler>();
-builder.Services.AddScoped<UploadPaymentsCsvHandler>();
-builder.Services.AddScoped<ReconcileRunHandler>();
-builder.Services.AddScoped<ReconcileResultHandler>();
 
 // Validation (FluentValidation)
 builder.Services.AddValidatorsFromAssemblyContaining<CreateCompanyRequestValidator>();
@@ -50,7 +33,6 @@ builder.Services.AddHttpLogging(o =>
                    | HttpLoggingFields.Duration;
 });
 
-builder.Services.AddScoped<UploadCustomersCsvHandler>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -63,19 +45,18 @@ app.UseStatusCodePages();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseHttpLogging();
 
-app.UseSwagger();
-app.UseSwaggerUI();
+// Swagger solo en Development
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 // Endpoints por feature
 app.MapHealthEndpoints();
 app.MapCompanyEndpoints();
-app.MapCustomerEndpoints();
-app.MapDebtEndpoints();
-app.MapPaymentEndpoints();
 app.MapBatchEndpoints();
 app.MapImportEndpoints();
 app.MapReconciliationEndpoints();
-app.MapReconciliationRunQueryEndpoints();
-
 
 app.Run();

@@ -1,62 +1,51 @@
+using System.Globalization;
 using System.Text.Json;
+using CsvHelper;
+using CsvHelper.Configuration;
 
 namespace ReconciliationApp.Application.Features.Imports;
 
 public static class CsvSimpleParser
 {
-    // MVP: separa por \n y por coma. No soporta comillas/escapes aún.
+    /// <summary>
+    /// Parsea un CSV a una lista de JSON strings, uno por fila.
+    /// Soporta campos con comas, comillas y saltos de línea dentro de celdas.
+    /// </summary>
     public static List<string> ParseToJsonRows(string csv)
     {
-        csv = csv.Replace("\r\n", "\n").Trim();
-        if (string.IsNullOrWhiteSpace(csv)) return new();
+        if (string.IsNullOrWhiteSpace(csv))
+            return new();
 
-        var lines = csv.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        if (lines.Length < 2) return new();
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            HasHeaderRecord = true,
+            TrimOptions = TrimOptions.Trim,
+            MissingFieldFound = null,       // no lanza error si faltan columnas
+            BadDataFound = null,            // ignora datos malformados sin tirar excepción
+        };
 
-        var headers = lines[0]
-            .Split(',')
-            .Select(h => NormalizeHeader(h.Trim()))
-            .ToArray();
+        using var reader = new StringReader(csv);
+        using var csvReader = new CsvReader(reader, config);
 
         var result = new List<string>();
 
-        for (int i = 1; i < lines.Length; i++)
-        {
-            var cols = lines[i].Split(',').Select(c => c.Trim()).ToArray();
-            var dict = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        // Leemos los registros como diccionarios dinámicos
+        csvReader.Read();
+        csvReader.ReadHeader();
+        var headers = csvReader.HeaderRecord ?? Array.Empty<string>();
 
-            for (int c = 0; c < headers.Length; c++)
+        while (csvReader.Read())
+        {
+            var dict = new Dictionary<string, string?>();
+
+            foreach (var header in headers)
             {
-                dict[headers[c]] = c < cols.Length ? cols[c] : null;
+                dict[header] = csvReader.GetField(header);
             }
 
             result.Add(JsonSerializer.Serialize(dict));
         }
 
         return result;
-    }
-
-    private static string NormalizeHeader(string header)
-    {
-        if (string.IsNullOrWhiteSpace(header))
-            return header;
-
-        var normalized = header
-            .Trim()
-            .ToLowerInvariant()
-            .Replace(" ", "_");
-
-        return normalized switch
-        {
-            "customerid" => "customer_id",
-            "customer_id" => "customer_id",
-            "customer" => "customer_id",
-            "client" => "customer_id",
-            "cliente" => "customer_id",
-            "amount" => "amount",
-            "importe" => "amount",
-            "monto" => "amount",
-            _ => normalized
-        };
     }
 }
