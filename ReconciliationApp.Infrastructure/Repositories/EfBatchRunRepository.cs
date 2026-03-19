@@ -1,5 +1,5 @@
-using ReconciliationApp.Application.Abstractions.Repositories;
 using Microsoft.EntityFrameworkCore;
+using ReconciliationApp.Application.Abstractions.Repositories;
 using ReconciliationApp.Domain.Entities.Batching;
 using ReconciliationApp.Infrastructure.Persistence;
 
@@ -16,6 +16,16 @@ public sealed class EfBatchRunRepository : IBatchRunRepository
         return Task.CompletedTask;
     }
 
-    public Task<ReconciliationApp.Domain.Entities.Batching.BatchRun?> GetByBatchAndRunNumberAsync(Guid batchId, int runNumber, CancellationToken ct = default)
+    public Task<BatchRun?> GetByBatchAndRunNumberAsync(Guid batchId, int runNumber, CancellationToken ct = default)
         => _db.BatchRuns.SingleOrDefaultAsync(r => r.BatchId == batchId && r.RunNumber == runNumber, ct);
+
+    /// <summary>
+    /// Devuelve el run con el RunNumber más alto del batch.
+    /// En el modelo online esto es siempre el run activo.
+    /// </summary>
+    public Task<BatchRun?> GetCurrentByBatchIdAsync(Guid batchId, CancellationToken ct = default)
+        => _db.BatchRuns
+              .Where(r => r.BatchId == batchId)
+              .OrderByDescending(r => r.RunNumber)
+              .FirstOrDefaultAsync(ct);
 }

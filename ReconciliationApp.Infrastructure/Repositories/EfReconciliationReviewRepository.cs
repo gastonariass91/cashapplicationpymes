@@ -45,16 +45,16 @@ public sealed class EfReconciliationReviewRepository : IReconciliationReviewRepo
     }
 
     public async Task<ReconciliationRun?> GetCurrentRunAsync(Guid companyId, CancellationToken ct = default)
-    {
-        return await _db.ReconciliationRuns
-            .AsNoTracking()
-            .Include(x => x.Cases)
-            .Include(x => x.BatchRun)
-                .ThenInclude(x => x.Batch)
-            .Where(x => x.BatchRun.Batch.CompanyId == companyId)
-            .OrderByDescending(x => x.BatchRun.CreatedAt)
-            .FirstOrDefaultAsync(ct);
-    }
+{
+    return await _db.ReconciliationRuns
+        .AsNoTracking()
+        .Include(x => x.Cases)
+        .Include(x => x.BatchRun)
+            .ThenInclude(x => x.Batch)
+        .Where(x => x.BatchRun.Batch.CompanyId == companyId)
+        .OrderByDescending(x => x.CreatedAt)   // ← cambio acá
+        .FirstOrDefaultAsync(ct);
+}
 
     public async Task<ReviewRunTotals?> GetCurrentRunTotalsAsync(Guid companyId, CancellationToken ct = default)
     {

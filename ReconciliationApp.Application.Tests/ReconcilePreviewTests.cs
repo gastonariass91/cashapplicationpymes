@@ -33,6 +33,9 @@ file sealed class StubBatchRunRepository : IBatchRunRepository
         => Task.FromResult(_run);
     public Task AddAsync(BatchRun run, CancellationToken ct)
         => Task.CompletedTask;
+
+    public Task<BatchRun?> GetCurrentByBatchIdAsync(Guid batchId, CancellationToken ct = default)
+        => Task.FromResult(_run);
 }
 
 file sealed class StubDebtRepository : IDebtRepository

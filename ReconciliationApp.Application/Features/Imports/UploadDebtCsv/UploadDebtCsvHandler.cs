@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ReconciliationApp.Application.Abstractions;
 using ReconciliationApp.Application.Abstractions.Repositories;
+using ReconciliationApp.Application.Features.Reconciliation.ReconcileByCompany;
 using ReconciliationApp.Domain.Entities.Core;
 using ReconciliationApp.Domain.Entities.Imports;
 
@@ -13,19 +14,22 @@ public sealed class UploadDebtCsvHandler
     private readonly ICustomerRepository _customers;
     private readonly IDebtRepository _debts;
     private readonly IUnitOfWork _uow;
+    private readonly ReconcileByCompanyHandler _reconcileByCompany;
 
     public UploadDebtCsvHandler(
         IImportRowRepository importRows,
         IBatchRepository batches,
         ICustomerRepository customers,
         IDebtRepository debts,
-        IUnitOfWork uow)
+        IUnitOfWork uow,
+        ReconcileByCompanyHandler reconcileByCompany)
     {
         _importRows = importRows;
         _batches = batches;
         _customers = customers;
         _debts = debts;
         _uow = uow;
+        _reconcileByCompany = reconcileByCompany;
     }
 
     public async Task<ImportResult> Handle(Guid batchId, int runNumber, UploadCsvRequest req, CancellationToken ct)
@@ -147,6 +151,9 @@ public sealed class UploadDebtCsvHandler
         }
 
         await _uow.SaveChangesAsync(ct);
+
+        // Auto-reconcile: actualiza el estado de conciliación con los datos nuevos
+        await _reconcileByCompany.HandleAsync(batch.CompanyId, batchId, runNumber, ct);
 
         return new ImportResult(
             ImportType: "debt",

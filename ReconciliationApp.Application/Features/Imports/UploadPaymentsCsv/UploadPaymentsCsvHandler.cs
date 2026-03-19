@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ReconciliationApp.Application.Abstractions;
 using ReconciliationApp.Application.Abstractions.Repositories;
+using ReconciliationApp.Application.Features.Reconciliation.ReconcileByCompany;
 using ReconciliationApp.Domain.Entities.Core;
 using ReconciliationApp.Domain.Entities.Imports;
 
@@ -13,19 +14,22 @@ public sealed class UploadPaymentsCsvHandler
     private readonly ICustomerRepository _customers;
     private readonly IPaymentRepository _payments;
     private readonly IUnitOfWork _uow;
+    private readonly ReconcileByCompanyHandler _reconcileByCompany;
 
     public UploadPaymentsCsvHandler(
         IImportRowRepository importRows,
         IBatchRepository batches,
         ICustomerRepository customers,
         IPaymentRepository payments,
-        IUnitOfWork uow)
+        IUnitOfWork uow,
+        ReconcileByCompanyHandler reconcileByCompany)
     {
         _importRows = importRows;
         _batches = batches;
         _customers = customers;
         _payments = payments;
         _uow = uow;
+        _reconcileByCompany = reconcileByCompany;
     }
 
     public async Task<ImportResult> Handle(Guid batchId, int runNumber, UploadCsvRequest req, CancellationToken ct)
@@ -104,6 +108,9 @@ public sealed class UploadPaymentsCsvHandler
             throw new InvalidOperationException(BuildValidationMessage("pagos", errors));
 
         await _uow.SaveChangesAsync(ct);
+
+        // Auto-reconcile: actualiza el estado de conciliación con los pagos nuevos
+        await _reconcileByCompany.HandleAsync(batch.CompanyId, batchId, runNumber, ct);
 
         return new ImportResult(
             ImportType: "payments",

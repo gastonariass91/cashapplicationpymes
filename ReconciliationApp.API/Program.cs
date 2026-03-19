@@ -58,5 +58,6 @@ app.MapCompanyEndpoints();
 app.MapBatchEndpoints();
 app.MapImportEndpoints();
 app.MapReconciliationEndpoints();
+app.MapReconciliationRunQueryEndpoints();
 
 app.Run();
