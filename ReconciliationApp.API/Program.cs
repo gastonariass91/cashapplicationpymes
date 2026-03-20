@@ -60,4 +60,7 @@ app.MapImportEndpoints();
 app.MapReconciliationEndpoints();
 app.MapReconciliationRunQueryEndpoints();
 
+
 app.Run();
+
+public partial class Program { } // expone Program para WebApplicationFactory
