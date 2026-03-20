@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using ReconciliationApp.Application.Abstractions;
 using ReconciliationApp.Application.Abstractions.Repositories;
 using ReconciliationApp.Application.Features.Reconciliation.ReconcileByCompany;
@@ -15,6 +16,7 @@ public sealed class UploadPaymentsCsvHandler
     private readonly IPaymentRepository _payments;
     private readonly IUnitOfWork _uow;
     private readonly ReconcileByCompanyHandler _reconcileByCompany;
+    private readonly ILogger<UploadPaymentsCsvHandler> _logger;
 
     public UploadPaymentsCsvHandler(
         IImportRowRepository importRows,
@@ -22,7 +24,8 @@ public sealed class UploadPaymentsCsvHandler
         ICustomerRepository customers,
         IPaymentRepository payments,
         IUnitOfWork uow,
-        ReconcileByCompanyHandler reconcileByCompany)
+        ReconcileByCompanyHandler reconcileByCompany,
+        ILogger<UploadPaymentsCsvHandler> logger)
     {
         _importRows = importRows;
         _batches = batches;
@@ -30,10 +33,15 @@ public sealed class UploadPaymentsCsvHandler
         _payments = payments;
         _uow = uow;
         _reconcileByCompany = reconcileByCompany;
+        _logger = logger;
     }
 
     public async Task<ImportResult> Handle(Guid batchId, int runNumber, UploadCsvRequest req, CancellationToken ct)
     {
+        _logger.LogInformation(
+            "Payments CSV import started. BatchId={BatchId} RunNumber={RunNumber}",
+            batchId, runNumber);
+
         var runId = await _importRows.GetRunIdAsync(batchId, runNumber, ct);
         if (runId is null) throw new InvalidOperationException("Run not found.");
 
@@ -41,6 +49,10 @@ public sealed class UploadPaymentsCsvHandler
         if (batch is null) throw new InvalidOperationException("Batch not found.");
 
         var jsonRows = CsvSimpleParser.ParseToJsonRows(req.Csv);
+
+        _logger.LogInformation(
+            "Payments CSV parsed. BatchId={BatchId} Rows={Rows}",
+            batchId, jsonRows.Count);
 
         await _importRows.DeleteByRunAndTypeAsync(runId.Value, ImportType.Payments, ct);
 
@@ -100,6 +112,9 @@ public sealed class UploadPaymentsCsvHandler
             }
             catch (Exception ex)
             {
+                _logger.LogWarning(ex,
+                    "Payments CSV row error. BatchId={BatchId} RowNumber={RowNumber}",
+                    batchId, rowNumber);
                 errors.Add(new ImportErrorDto(rowNumber, ex.Message));
             }
         }
@@ -109,7 +124,10 @@ public sealed class UploadPaymentsCsvHandler
 
         await _uow.SaveChangesAsync(ct);
 
-        // Auto-reconcile: actualiza el estado de conciliación con los pagos nuevos
+        _logger.LogInformation(
+            "Payments CSV import completed. BatchId={BatchId} Inserted={Inserted} Ignored={Ignored}",
+            batchId, inserted, ignored);
+
         await _reconcileByCompany.HandleAsync(batch.CompanyId, batchId, runNumber, ct);
 
         return new ImportResult(
