@@ -165,7 +165,7 @@ public sealed class ReconciliationApiClient
         return (false, string.IsNullOrWhiteSpace(content) ? "No se pudo confirmar." : content);
     }
 
-    public sealed record CustomerDto(Guid Id, string CustomerKey, string Name, string? Email, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+    public sealed record CustomerDto(Guid Id, string CustomerKey, string Name, string? Email, decimal TotalOutstanding, int InvoiceCount, decimal UnapliedAmount, int UnapliedCount, string Status, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 
     public async Task<List<CustomerDto>?> ListCustomersAsync(Guid companyId, CancellationToken ct = default)
     {
