@@ -8,6 +8,8 @@ using ReconciliationApp.Application.Features.Imports.UploadPaymentsCsv;
 using ReconciliationApp.Application.Features.Reconciliation.ReconcileByCompany;
 using ReconciliationApp.Application.Features.Reconciliation.ReconcileResult;
 using ReconciliationApp.Application.Features.Reconciliation.ReconcileRun;
+using ReconciliationApp.Application.Features.Auth.Login;
+using ReconciliationApp.Application.Features.Auth.Register;
 
 namespace ReconciliationApp.Application.DependencyInjection;
 
@@ -31,6 +33,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<UploadCustomersCsvHandler>();
         services.AddScoped<UploadDebtCsvHandler>();
         services.AddScoped<UploadPaymentsCsvHandler>();
+
+        // Auth
+        services.AddScoped<LoginHandler>();
+        services.AddScoped<RegisterUserHandler>();
 
         return services;
     }

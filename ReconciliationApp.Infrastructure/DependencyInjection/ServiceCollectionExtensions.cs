@@ -32,6 +32,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IReconciliationMatchRepository, EfReconciliationMatchRepository>();
         services.AddScoped<IReconciliationCaseRepository, EfReconciliationCaseRepository>();
         services.AddScoped<IReconciliationReviewRepository, EfReconciliationReviewRepository>();
+        services.AddScoped<IUserRepository, EfUserRepository>();
 
         services.AddScoped<IRunNumberService, RunNumberService>();
 

@@ -1,5 +1,7 @@
 @page "/reconciliation"
 @page "/reconciliation/{RunId}"
+@inject AuthState Auth
+@inject NavigationManager Nav
 @using Microsoft.JSInterop
 @using ReconciliationApp.Frontend.Contracts.Reconciliation
 @using ReconciliationApp.Frontend.Models
@@ -196,6 +198,8 @@ else
 
   protected override void OnInitialized()
   {
+    if (!Auth.IsAuthenticated)
+        Nav.NavigateTo("/login");
     Store.OnChange += HandleStoreChange;
   }
 

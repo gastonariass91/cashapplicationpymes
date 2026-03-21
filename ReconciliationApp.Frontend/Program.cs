@@ -7,12 +7,22 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Estado global
 builder.Services.AddSingleton<LayoutState>();
 builder.Services.AddScoped<ReconciliationStore>();
+builder.Services.AddScoped<AuthState>();
+
+// HTTP clients
+var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "http://localhost:5081";
 
 builder.Services.AddHttpClient<ReconciliationApiClient>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5081/");
+    client.BaseAddress = new Uri(apiBaseUrl);
+});
+
+builder.Services.AddHttpClient<AuthApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
 });
 
 var app = builder.Build();

@@ -1,0 +1,232 @@
+@page "/login"
+@inject AuthApiClient AuthClient
+@inject AuthState Auth
+@inject NavigationManager Nav
+
+<PageTitle>Iniciar sesión</PageTitle>
+
+<div class="login-wrapper">
+    <div class="login-card">
+        <div class="login-header">
+            <span class="login-logo">⚖</span>
+            <h1>Cash Application</h1>
+            <p>Ingresá tus credenciales para continuar</p>
+        </div>
+
+        <div class="login-body">
+            @if (_error is not null)
+            {
+                <div class="login-error">
+                    @_error
+                </div>
+            }
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input id="email"
+                       type="email"
+                       class="form-input"
+                       placeholder="usuario@empresa.com"
+                       @bind="_email"
+                       @onkeydown="OnKeyDown"
+                       disabled="@_loading" />
+            </div>
+
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <input id="password"
+                       type="password"
+                       class="form-input"
+                       placeholder="••••••••"
+                       @bind="_password"
+                       @onkeydown="OnKeyDown"
+                       disabled="@_loading" />
+            </div>
+
+            <button class="login-btn @(_loading ? "loading" : "")"
+                    @onclick="HandleLogin"
+                    disabled="@_loading">
+                @if (_loading)
+                {
+                    <span>Ingresando...</span>
+                }
+                else
+                {
+                    <span>Ingresar</span>
+                }
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .login-wrapper {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-base, #0f1117);
+    }
+
+    .login-card {
+        width: 100%;
+        max-width: 400px;
+        background: var(--bg-surface, #1a1d27);
+        border: 1px solid var(--border, #2a2d3a);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .login-header {
+        padding: 2rem 2rem 1.5rem;
+        text-align: center;
+        border-bottom: 1px solid var(--border, #2a2d3a);
+    }
+
+    .login-logo {
+        font-size: 2rem;
+        display: block;
+        margin-bottom: 0.75rem;
+    }
+
+    .login-header h1 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary, #e2e8f0);
+        margin: 0 0 0.5rem;
+    }
+
+    .login-header p {
+        font-size: 0.875rem;
+        color: var(--text-secondary, #94a3b8);
+        margin: 0;
+    }
+
+    .login-body {
+        padding: 1.75rem 2rem 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .login-error {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+        color: #fca5a5;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-group label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-secondary, #94a3b8);
+    }
+
+    .form-input {
+        background: var(--bg-base, #0f1117);
+        border: 1px solid var(--border, #2a2d3a);
+        border-radius: 8px;
+        padding: 0.625rem 0.875rem;
+        font-size: 0.9375rem;
+        color: var(--text-primary, #e2e8f0);
+        outline: none;
+        transition: border-color 0.15s;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .form-input:focus {
+        border-color: var(--accent, #6366f1);
+    }
+
+    .form-input:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .login-btn {
+        background: var(--accent, #6366f1);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.15s;
+        width: 100%;
+        margin-top: 0.25rem;
+    }
+
+    .login-btn:hover:not(:disabled) {
+        opacity: 0.9;
+    }
+
+    .login-btn:disabled, .login-btn.loading {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+</style>
+
+@code {
+    private string _email    = "";
+    private string _password = "";
+    private string? _error   = null;
+    private bool _loading    = false;
+
+    protected override void OnInitialized()
+    {
+        // Si ya está autenticado, redirigir directo a reconciliación
+        if (Auth.IsAuthenticated)
+            Nav.NavigateTo("/reconciliation");
+    }
+
+    private async Task HandleLogin()
+    {
+        _error   = null;
+        _loading = true;
+
+        try
+        {
+            var result = await AuthClient.LoginAsync(_email.Trim(), _password);
+
+            if (result is null)
+            {
+                _error = "Email o contraseña incorrectos.";
+                return;
+            }
+
+            Auth.SetUser(
+                result.Token,
+                result.Email,
+                result.FullName,
+                result.Role,
+                result.CompanyId,
+                result.ExpiresAt);
+
+            Nav.NavigateTo("/reconciliation");
+        }
+        catch (Exception)
+        {
+            _error = "No se pudo conectar con el servidor. Intentá de nuevo.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await HandleLogin();
+    }
+}
