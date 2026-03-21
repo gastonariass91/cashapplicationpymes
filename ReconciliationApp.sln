@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReconciliationApp.Applicati
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReconciliationApp.Frontend", "ReconciliationApp.Frontend\ReconciliationApp.Frontend.csproj", "{CCD3A1EE-2D95-4D69-A1FA-741886366296}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReconciliationApp.API.Tests", "ReconciliationApp.API.Tests\ReconciliationApp.API.Tests.csproj", "{4EEFAF5F-1F6A-4D30-89C0-A7182182297B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,5 +50,9 @@ Global
 		{CCD3A1EE-2D95-4D69-A1FA-741886366296}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CCD3A1EE-2D95-4D69-A1FA-741886366296}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CCD3A1EE-2D95-4D69-A1FA-741886366296}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4EEFAF5F-1F6A-4D30-89C0-A7182182297B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4EEFAF5F-1F6A-4D30-89C0-A7182182297B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4EEFAF5F-1F6A-4D30-89C0-A7182182297B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4EEFAF5F-1F6A-4D30-89C0-A7182182297B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

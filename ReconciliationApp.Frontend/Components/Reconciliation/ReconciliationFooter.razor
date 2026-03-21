@@ -1,0 +1,59 @@
+@using ReconciliationApp.Frontend.Models
+@using ReconciliationApp.Frontend.State
+
+<div class="footerBar">
+  <div class="footerInner reconFooter">
+    <div class="footerSummary refined">
+      <span class="footerChip pending">
+        Pendientes <b>@Store.PendingCount</b>
+      </span>
+
+      <span class="footerChip exception">
+        Excepciones <b>@Store.ExceptionCount</b>
+      </span>
+
+      <span class="footerChip auto">
+        Automáticos <b>@Store.AutoCount</b>
+      </span>
+    </div>
+
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <span class="small footerExplain">
+        @if (Store.CanConfirm)
+        {
+          <span>Todo resuelto. Ya podés confirmar la conciliación.</span>
+        }
+        else if (Store.PendingCount > 0)
+        {
+          <span>Confirmación bloqueada: hay pendientes por resolver.</span>
+        }
+        else
+        {
+          <span>Confirmación bloqueada: hay excepciones por revisar.</span>
+        }
+      </span>
+
+      <button class="btn primary"
+              disabled="@(Store.View!=ReconciliationView.Auto)"
+              @onclick="OnAcceptVisible">
+        Aceptar visibles
+      </button>
+
+      <button class="btn primary"
+              disabled="@(!Store.CanConfirm)"
+              title="@(Store.CanConfirm ? "Confirmar conciliación" : "Resolvé pendientes o excepciones antes de confirmar")"
+              @onclick="OnConfirm">
+        Confirmar conciliación
+      </button>
+    </div>
+  </div>
+</div>
+
+@code {
+  [Parameter, EditorRequired] public ReconciliationStore Store { get; set; } = default!;
+  [Parameter] public EventCallback AcceptVisibleRequested { get; set; }
+  [Parameter] public EventCallback ConfirmRequested { get; set; }
+
+  Task OnAcceptVisible() => AcceptVisibleRequested.InvokeAsync();
+  Task OnConfirm() => ConfirmRequested.InvokeAsync();
+}

@@ -1,6 +1,252 @@
 @page "/imports"
+@using Microsoft.AspNetCore.Components.Forms
+@using ReconciliationApp.Frontend.Services
+@inject ReconciliationApiClient ApiClient
+@inject AuthState Auth
+@inject NavigationManager Navigation
 
-<div class="card" style="padding:16px;">
-  <b>Importaciones</b>
-  <div class="small" style="margin-top:6px;">Placeholder (después conectamos con upload CSV del backend).</div>
+<PageTitle>Imports</PageTitle>
+
+<div class="card" style="padding:24px; margin-top:16px;">
+  <h2 style="margin:0;">Imports</h2>
+  <div class="small" style="color:var(--muted); margin-top:6px;">
+    Subí CSV de customers, deuda o pagos. El sistema procesa cada archivo automáticamente.
+  </div>
 </div>
+
+@if (!string.IsNullOrWhiteSpace(PageError))
+{
+  <div class="card" style="padding:16px; margin-top:16px; border:1px solid rgba(239,68,68,.30);">
+    <b>Error</b>
+    <div style="margin-top:8px; color:var(--muted);">@PageError</div>
+  </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(PageSuccess))
+{
+  <div class="card" style="padding:16px; margin-top:16px; border:1px solid rgba(34,197,94,.30);">
+    <b>OK</b>
+    <div style="margin-top:8px; color:var(--muted);">@PageSuccess</div>
+  </div>
+}
+
+@if (LastImportResult is not null)
+{
+  <div class="card" style="padding:16px; margin-top:16px;">
+    <b>Resumen de importación: @LastImportResult.ImportType</b>
+    <div style="margin-top:12px; display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
+      <div><span class="small" style="color:var(--muted);">Procesadas</span><div><b>@LastImportResult.ProcessedCount</b></div></div>
+      <div><span class="small" style="color:var(--muted);">Insertadas</span><div><b>@LastImportResult.InsertedCount</b></div></div>
+      <div><span class="small" style="color:var(--muted);">Actualizadas</span><div><b>@LastImportResult.UpdatedCount</b></div></div>
+      <div><span class="small" style="color:var(--muted);">Ignoradas</span><div><b>@LastImportResult.IgnoredCount</b></div></div>
+      <div><span class="small" style="color:var(--muted);">Cerradas</span><div><b>@LastImportResult.ClosedCount</b></div></div>
+      <div><span class="small" style="color:var(--muted);">Errores</span><div><b>@LastImportResult.ErrorCount</b></div></div>
+    </div>
+
+    @if (LastImportResult.Errors.Any())
+    {
+      <div style="margin-top:16px;">
+        <div class="small" style="color:var(--muted); margin-bottom:8px;">Detalle de errores</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          @foreach (var err in LastImportResult.Errors)
+          {
+            <div class="small" style="padding:10px 12px; border:1px solid rgba(239,68,68,.20); border-radius:10px;">
+              <b>Fila @err.RowNumber</b> · @err.Message
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<div class="card" style="padding:24px; margin-top:16px;">
+  <h3 style="margin-top:0;">1. CSV de customers</h3>
+  <InputFile OnChange="OnCustomersFileSelected" accept=".csv" />
+  <div class="small" style="margin-top:8px; color:var(--muted);">@CustomersFileStatus</div>
+  <div style="margin-top:16px;">
+    <button class="btn" @onclick="UploadCustomersAsync" disabled="@(!CanUploadCustomers)">
+      @(UploadingCustomers ? "Subiendo..." : "Subir CSV de customers")
+    </button>
+  </div>
+</div>
+
+<div class="card" style="padding:24px; margin-top:16px;">
+  <h3 style="margin-top:0;">2. CSV de deuda</h3>
+  <InputFile OnChange="OnDebtFileSelected" accept=".csv" />
+  <div class="small" style="margin-top:8px; color:var(--muted);">@DebtFileStatus</div>
+  <div style="margin-top:16px;">
+    <button class="btn" @onclick="UploadDebtAsync" disabled="@(!CanUploadDebt)">
+      @(UploadingDebt ? "Subiendo..." : "Subir CSV de deuda")
+    </button>
+  </div>
+</div>
+
+<div class="card" style="padding:24px; margin-top:16px;">
+  <h3 style="margin-top:0;">3. CSV de pagos</h3>
+  <InputFile OnChange="OnPaymentsFileSelected" accept=".csv" />
+  <div class="small" style="margin-top:8px; color:var(--muted);">@PaymentsFileStatus</div>
+  <div style="margin-top:16px;">
+    <button class="btn" @onclick="UploadPaymentsAsync" disabled="@(!CanUploadPayments)">
+      @(UploadingPayments ? "Subiendo..." : "Subir CSV de pagos")
+    </button>
+  </div>
+</div>
+
+@code {
+  private const long MaxCsvSizeBytes = 5 * 1024 * 1024;
+
+  private Guid? _sessionBatchId;
+  private int _sessionRunNumber;
+
+  private IBrowserFile? CustomersFile;
+  private IBrowserFile? DebtFile;
+  private IBrowserFile? PaymentsFile;
+
+  private bool UploadingCustomers;
+  private bool UploadingDebt;
+  private bool UploadingPayments;
+
+  private bool CustomersUploaded;
+  private bool DebtUploaded;
+  private bool PaymentsUploaded;
+
+  private string? PageError;
+  private string? PageSuccess;
+  private ImportResultDto? LastImportResult;
+
+  private string CustomersFileStatus =>
+      CustomersUploaded ? "CSV de customers subido correctamente." :
+      CustomersFile is null ? "Seleccioná archivo." : $"Archivo: {CustomersFile.Name}";
+
+  private string DebtFileStatus =>
+      DebtUploaded ? "CSV de deuda subido correctamente." :
+      DebtFile is null ? "Seleccioná archivo." : $"Archivo: {DebtFile.Name}";
+
+  private string PaymentsFileStatus =>
+      PaymentsUploaded ? "CSV de pagos subido correctamente." :
+      PaymentsFile is null ? "Seleccioná archivo." : $"Archivo: {PaymentsFile.Name}";
+
+  private bool CanUploadCustomers => CustomersFile is not null && !UploadingCustomers;
+  private bool CanUploadDebt => DebtFile is not null && !UploadingDebt;
+  private bool CanUploadPayments => PaymentsFile is not null && !UploadingPayments;
+
+  private Task OnCustomersFileSelected(InputFileChangeEventArgs args)
+  {
+      CustomersFile = args.File;
+      CustomersUploaded = false;
+      ClearMessages();
+      return Task.CompletedTask;
+  }
+
+  private Task OnDebtFileSelected(InputFileChangeEventArgs args)
+  {
+      DebtFile = args.File;
+      DebtUploaded = false;
+      ClearMessages();
+      return Task.CompletedTask;
+  }
+
+  private Task OnPaymentsFileSelected(InputFileChangeEventArgs args)
+  {
+      PaymentsFile = args.File;
+      PaymentsUploaded = false;
+      ClearMessages();
+      return Task.CompletedTask;
+  }
+
+  private async Task UploadCustomersAsync()
+  {
+      ClearMessages();
+      if (CustomersFile is null) { PageError = "Seleccioná el CSV de customers."; return; }
+      UploadingCustomers = true;
+      try
+      {
+          var (batchId, runNumber) = await GetOrCreateSessionAsync();
+          var csv = await ReadFileAsTextAsync(CustomersFile);
+          var result = await ApiClient.UploadCustomersCsvAsync(batchId, runNumber, csv);
+          if (result is null) { PageError = "No se pudo subir el CSV de customers."; return; }
+          LastImportResult = result;
+          CustomersUploaded = true;
+          PageSuccess = "CSV de customers subido. Conciliación actualizada.";
+          Navigation.NavigateTo("/reconciliation");
+      }
+      catch (Exception ex) { PageError = ex.Message; }
+      finally { UploadingCustomers = false; }
+  }
+
+  private async Task UploadDebtAsync()
+  {
+      ClearMessages();
+      if (DebtFile is null) { PageError = "Seleccioná el CSV de deuda."; return; }
+      UploadingDebt = true;
+      try
+      {
+          var (batchId, runNumber) = await GetOrCreateSessionAsync();
+          var csv = await ReadFileAsTextAsync(DebtFile);
+          var result = await ApiClient.UploadDebtCsvAsync(batchId, runNumber, csv);
+          if (result is null) { PageError = "No se pudo subir el CSV de deuda."; return; }
+          LastImportResult = result;
+          DebtUploaded = true;
+          PageSuccess = "CSV de deuda subido. Conciliación actualizada.";
+          Navigation.NavigateTo("/reconciliation");
+      }
+      catch (Exception ex) { PageError = ex.Message; }
+      finally { UploadingDebt = false; }
+  }
+
+  private async Task UploadPaymentsAsync()
+  {
+      ClearMessages();
+      if (PaymentsFile is null) { PageError = "Seleccioná el CSV de pagos."; return; }
+      UploadingPayments = true;
+      try
+      {
+          var (batchId, runNumber) = await GetOrCreateSessionAsync();
+          var csv = await ReadFileAsTextAsync(PaymentsFile);
+          var result = await ApiClient.UploadPaymentsCsvAsync(batchId, runNumber, csv);
+          if (result is null) { PageError = "No se pudo subir el CSV de pagos."; return; }
+          LastImportResult = result;
+          PaymentsUploaded = true;
+          PageSuccess = "CSV de pagos subido. Conciliación actualizada.";
+          Navigation.NavigateTo("/reconciliation");
+      }
+      catch (Exception ex) { PageError = ex.Message; }
+      finally { UploadingPayments = false; }
+  }
+
+  private async Task<(Guid BatchId, int RunNumber)> GetOrCreateSessionAsync()
+  {
+      if (_sessionBatchId.HasValue)
+          return (_sessionBatchId.Value, _sessionRunNumber);
+
+      var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+      var batch = await ApiClient.CreateBatchAsync(Auth.CompanyId, today, today);
+      if (batch is null)
+          throw new InvalidOperationException("No se pudo obtener el batch.");
+
+      var run = await ApiClient.CreateRunAsync(batch.BatchId);
+      if (run is null)
+          throw new InvalidOperationException("No se pudo obtener el run.");
+
+      _sessionBatchId = run.BatchId;
+      _sessionRunNumber = run.RunNumber;
+
+      return (_sessionBatchId.Value, _sessionRunNumber);
+  }
+
+  private static async Task<string> ReadFileAsTextAsync(IBrowserFile file)
+  {
+      await using var stream = file.OpenReadStream(MaxCsvSizeBytes);
+      using var reader = new StreamReader(stream);
+      return await reader.ReadToEndAsync();
+  }
+
+  private void ClearMessages()
+  {
+      PageError = null;
+      PageSuccess = null;
+      LastImportResult = null;
+  }
+}

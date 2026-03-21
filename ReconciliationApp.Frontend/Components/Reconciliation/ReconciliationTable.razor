@@ -1,0 +1,178 @@
+@using ReconciliationApp.Frontend.Models
+@using ReconciliationApp.Frontend.State
+
+<div class="card">
+  <div class="panelHead">
+    <div style="display:flex; flex-direction:column; gap:2px; min-width:0;">
+      <b>@TableTitle()</b>
+      <span>@TableSubtitle()</span>
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <div class="search">
+        <span class="searchIcon" style="color:var(--muted)">🔎</span>
+        <input value="@Store.Query" @oninput="OnQueryInput" placeholder="Buscar por cliente, regla, monto o evidencia…" />
+        <span class="hint mono">⌘K</span>
+      </div>
+      <button class="btn ghostBtn" @onclick="OnClearSelection">Limpiar</button>
+    </div>
+  </div>
+
+  <table class="table reconcTable">
+    <thead>
+      <tr>
+        <th class="sel" style="@(Store.View==ReconciliationView.Auto ? "" : "visibility:hidden")" title="Seleccionar todo visible">
+          <span class="checkbox">
+            <input type="checkbox"
+                   checked="@Store.AllVisibleSelected()"
+                   @onchange="OnToggleAll" />
+          </span>
+        </th>
+        <th>Tipo</th>
+        <th>Cliente</th>
+        <th>Deuda</th>
+        <th>Pago</th>
+        <th title="Diferencia entre deuda y pago">Δ</th>
+        <th>Sugerencia</th>
+        <th>Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      @foreach (var r in Store.VisibleRows())
+      {
+        var key = r.Key;
+        <tr class="@(Store.SelectedKey==key ? "selected" : "")" @onclick="() => OnOpenDrawer(key)">
+          <td class="sel">
+            @if (Store.View==ReconciliationView.Auto)
+            {
+              <span class="checkbox" @onclick:stopPropagation="true">
+                <input type="checkbox"
+                       checked="@Store.Selected.Contains(key)"
+                       @onchange="(e)=>OnToggleOne(key,e)" />
+              </span>
+            }
+          </td>
+
+          <td>
+            <div class="caseCell">
+              <span class="typeBadge" title="@ReconciliationUi.TypeLabel(r.Type)">@ReconciliationUi.TypeIcon(r.Type)</span>
+              <div class="caseMeta">
+                <b>@ReconciliationUi.TypeLabel(r.Type)</b>
+                <span class="cellSub mono">@RowPairLabel(r)</span>
+              </div>
+            </div>
+          </td>
+
+          <td>
+            <b>@r.Customer</b>
+            <span class="cellSub">@r.Rule</span>
+          </td>
+
+          <td>
+            <b>@ReconciliationStore.Money(r.DebtAmount)</b>
+            <span class="cellSub">Deuda</span>
+          </td>
+
+          <td>
+            <b>@ReconciliationStore.Money(r.PaymentAmount)</b>
+            <span class="cellSub">Pago</span>
+          </td>
+
+          <td>
+            <span class="delta @ReconciliationUi.DeltaClass(r.Delta) mono">@ReconciliationStore.Money(r.Delta)</span>
+          </td>
+
+          <td>@(SuggestionChip(r))</td>
+          <td>@(StatusChip(r.Status))</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+@code {
+  [Parameter, EditorRequired] public ReconciliationStore Store { get; set; } = default!;
+
+  [Parameter] public EventCallback<string> QueryChanged { get; set; }
+  [Parameter] public EventCallback ClearSelectionRequested { get; set; }
+  [Parameter] public EventCallback<bool> ToggleAllRequested { get; set; }
+  [Parameter] public EventCallback<(string Key, bool On)> ToggleOneRequested { get; set; }
+  [Parameter] public EventCallback<string> OpenDrawerRequested { get; set; }
+
+  Task OnQueryInput(ChangeEventArgs e)
+    => QueryChanged.InvokeAsync(e.Value?.ToString() ?? "");
+
+  Task OnClearSelection()
+    => ClearSelectionRequested.InvokeAsync();
+
+  Task OnToggleAll(ChangeEventArgs e)
+  {
+    var on = e.Value is bool b && b;
+    return ToggleAllRequested.InvokeAsync(on);
+  }
+
+  Task OnToggleOne(string key, ChangeEventArgs e)
+  {
+    var on = e.Value is bool b && b;
+    return ToggleOneRequested.InvokeAsync((key, on));
+  }
+
+  Task OnOpenDrawer(string key)
+    => OpenDrawerRequested.InvokeAsync(key);
+
+  string TableTitle()
+    => Store.View switch
+    {
+      ReconciliationView.Auto => "Automáticas · lista para operar",
+      ReconciliationView.Pending => "Pendientes · revisión manual",
+      _ => "Excepciones · casos observados"
+    };
+
+  string TableSubtitle()
+    => Store.View switch
+    {
+      ReconciliationView.Auto => "Aceptá rápido los matches correctos y abrí el detalle cuando tengas dudas.",
+      ReconciliationView.Pending => "Casos que requieren criterio humano.",
+      _ => "Casos descartados o marcados como excepción."
+    };
+
+  string RowPairLabel(ReconciliationRow r)
+  {
+    var debt = r.DebtRowNumber is int d ? $"#{d}" : "Sin deuda";
+    var pay = r.PaymentRowNumber is int p ? $"#{p}" : "Sin pago";
+    return $"{debt} ↔ {pay}";
+  }
+
+  RenderFragment SuggestionChip(ReconciliationRow r) => __builder =>
+  {
+    var cls = r.Suggestion.Contains("cuidado", StringComparison.OrdinalIgnoreCase) ? "chip warn"
+      : r.Suggestion.Contains("Excepción", StringComparison.OrdinalIgnoreCase) ? "chip bad"
+      : "chip good";
+
+    __builder.OpenElement(0, "span");
+    __builder.AddAttribute(1, "class", cls);
+    __builder.AddContent(2, r.Suggestion);
+    __builder.CloseElement();
+  };
+
+  RenderFragment StatusChip(RowStatus status) => __builder =>
+  {
+    var cls = status switch
+    {
+      RowStatus.Ok => "chip good",
+      RowStatus.Pending => "chip warn",
+      _ => "chip bad"
+    };
+
+    var label = status switch
+    {
+      RowStatus.Ok => "Ok",
+      RowStatus.Pending => "Pendiente",
+      _ => "Excepción"
+    };
+
+    __builder.OpenElement(0, "span");
+    __builder.AddAttribute(1, "class", cls);
+    __builder.AddContent(2, label);
+    __builder.CloseElement();
+  };
+}

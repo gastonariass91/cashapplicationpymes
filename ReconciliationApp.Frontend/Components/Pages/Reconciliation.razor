@@ -1,380 +1,417 @@
 @page "/reconciliation"
+@page "/reconciliation/{RunId}"
+@inject AuthState Auth
+@inject NavigationManager Nav
+@using Microsoft.JSInterop
+@using ReconciliationApp.Frontend.Contracts.Reconciliation
 @using ReconciliationApp.Frontend.Models
+@using ReconciliationApp.Frontend.Services
 @using ReconciliationApp.Frontend.State
 @inject ReconciliationStore Store
+@inject ReconciliationApiClient ApiClient
+@inject IJSRuntime JS
+@implements IDisposable
 
-@inject ReconciliationApp.Frontend.State.LayoutState Layout
 <PageTitle>Conciliación</PageTitle>
 
-<div class="overlay @(Store.DrawerOpen ? "show" : "")" @onclick="CloseDrawer"></div>
-    <div class="wrap">
-
-      <div class="header card">
-        <div class="hLeft">
-<button type="button" class="iconBtn" title="Menú" @onclick="Layout.ToggleSidebar">
-  <svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-</button>
-<div class="hLogo" title="Logo empresa">AG</div>
-          <div class="hCompany">
-            <b>Alimentos Garcia SA</b>
-            <span>Conciliación · Periodo <span class="mono">Mar 2026</span> · Run <span class="mono">#2</span></span>
-          </div>
-        </div>
-
-        <div class="hRight">
-          <div class="badge"><span class="dot good"></span> Auto <b style="color:var(--text); font-weight:950;">@($"{Store.AutoRate}%")</b></div>
-          <div class="badge"><span class="dot warn"></span> Pendientes <b style="color:var(--text); font-weight:950;">@Store.PendingCount</b></div>
-          <div class="badge"><span class="dot bad"></span> Excepciones <b style="color:var(--text); font-weight:950;">@Store.ExceptionCount</b></div>
-        </div>
-      </div>
-
-      <div class="kpis">
-        <div class="card kpi">
-          <div class="label">Deudas <span class="mini">@($"{Store.DebtsRowsTotal} filas")</span></div>
-          <div class="value">@ReconciliationStore.Money(Store.DebtsAmtTotal)</div>
-        </div>
-        <div class="card kpi">
-          <div class="label">Pagos <span class="mini">@($"{Store.PaysRowsTotal} filas")</span></div>
-          <div class="value">@ReconciliationStore.Money(Store.PaysAmtTotal)</div>
-        </div>
-        <div class="card kpi">
-          <div class="label">Automáticas <span class="mini" style="color:rgba(187,255,212,.95)">Reglas</span></div>
-          <div class="value">@Store.AutoCount</div>
-        </div>
-        <div class="card kpi">
-          <div class="label">Pendientes <span class="mini" style="color:rgba(255,232,191,.98)">Revisar</span></div>
-          <div class="value">@Store.PendingCount</div>
-        </div>
-        <div class="card kpi">
-          <div class="label">Excepciones <span class="mini" style="color:rgba(255,203,203,.98)">Decidir</span></div>
-          <div class="value">@Store.ExceptionCount</div>
-        </div>
-      </div>
-
-      <div class="tabs">
-        <button class="tab @(Store.View==ReconciliationView.Auto?"active":"")" @onclick="() => SetView(ReconciliationView.Auto)">Automáticas</button>
-        <button class="tab @(Store.View==ReconciliationView.Pending?"active":"")" @onclick="() => SetView(ReconciliationView.Pending)">Pendientes</button>
-        <button class="tab @(Store.View==ReconciliationView.Exceptions?"active":"")" @onclick="() => SetView(ReconciliationView.Exceptions)">Excepciones</button>
-
-        @if (Store.View == ReconciliationView.Auto)
-        {
-          <div class="pills" title="Filtro por confianza (solo Automáticas)">
-            <div class="pill @(Store.ConfFilter=="all"?"active":"")" @onclick="SetConfAll">Todas</div>
-            <div class="pill @(Store.ConfFilter=="Alta"?"active":"")" @onclick="SetConfAlta">Alta</div>
-            <div class="pill @(Store.ConfFilter=="Alta+Media"?"active":"")" @onclick="SetConfAltaMedia">Alta+Media</div>
-          </div>
-        }
-
-        <div class="tip">Tip: aceptá Automáticas (Alta/Media) y pasá a Pendientes.</div>
-      </div>
-
-      <div class="layout">
-        <div class="card">
-          <div class="panelHead">
-            <div style="display:flex; flex-direction:column; gap:2px; min-width:0;">
-              <b>@TableTitle()</b>
-              <span>@TableSubtitle()</span>
-            </div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-              <div class="search">
-                <span style="color:var(--muted)">🔎</span>
-                <input value="@Store.Query" @oninput="OnQuery" placeholder="Buscar por cliente, monto, regla, tipo…" />
-                <span class="hint mono">⌘K</span>
-              </div>
-              <button class="btn" @onclick="ClearSelection">Limpiar</button>
-            </div>
-          </div>
-
-          <table class="table">
-            <thead>
-              <tr>
-                <th class="sel" style="@(Store.View==ReconciliationView.Auto ? "" : "visibility:hidden")" title="Seleccionar todo visible">
-                  <span class="checkbox">
-                    <input type="checkbox"
-                           checked="@Store.AllVisibleSelected()"
-                           @onchange="ToggleAll" />
-                  </span>
-                </th>
-                <th>Riesgo</th>
-                <th>Caso</th>
-                <th>Cliente</th>
-                <th>Monto / Δ</th>
-                <th>Sugerencia</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              @foreach (var r in Store.VisibleRows())
-              {
-                var key = r.Key;
-                <tr class="@(Store.SelectedKey==key ? "selected" : "")" @onclick="() => OpenDrawer(key)">
-                  <td class="sel">
-                    @if (Store.View==ReconciliationView.Auto)
-                    {
-                      <span class="checkbox" @onclick:stopPropagation="true">
-                        <input type="checkbox" checked="@Store.Selected.Contains(key)" @onchange="(e)=>ToggleOne(key,e)" />
-                      </span>
-                    }
-                  </td>
-                  <td>@(RiskCell(r))</td>
-                  <td>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                      <span class="typeBadge" title="@TypeLabel(r.Type)">@TypeIcon(r.Type)</span>
-                      <div style="display:flex; flex-direction:column; min-width:0;">
-                        <b class="mono">#@r.DebtRowNumber ↔ #@r.PaymentRowNumber</b>
-                        <span class="cellSub">@TypeLabel(r.Type) · @r.Rule</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <b>@r.Customer</b>
-                    <span class="cellSub">@r.Evidence</span>
-                  </td>
-                  <td>
-                    <b>@ReconciliationStore.Money(r.DebtAmount)</b>
-                    <span class="cellSub">Pago @ReconciliationStore.Money(r.PaymentAmount) · Δ <span class="delta @DeltaClass(r.Delta) mono">@DeltaText(r.Delta)</span></span>
-                  </td>
-                  <td>@(SuggestionChip(r))</td>
-                  <td>@(StatusChip(r.Status))</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-
-        <div class="side card">
-          <div class="panelHead">
-            <div style="display:flex; flex-direction:column; gap:2px;">
-              <b>Asistente</b>
-              <span>Acción guiada (bulk)</span>
-            </div>
-          </div>
-
-          <div class="box">
-            <p class="sectionTitle">Aceptación en bloque</p>
-            <div class="callout" style="margin-bottom:10px;">
-              <b>Recomendación:</b> aceptá <span class="mono">Alta</span> y (opcional) <span class="mono">Media</span>.
-            </div>
-
-            <div class="kv">
-              <div class="k">Seleccionadas</div><div><b>@Store.Selected.Count</b></div>
-              <div class="k">Visibles (filtro)</div><div><b>@Store.VisibleRows().Count()</b></div>
-              <div class="k">Auto totales</div><div><b>@Store.AutoCount</b></div>
-            </div>
-
-            <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
-              <button class="btn primary" disabled="@(Store.Selected.Count==0 || Store.View!=ReconciliationView.Auto)" @onclick="AcceptSelected">Aceptar seleccionadas</button>
-              <button class="btn" disabled="@(Store.View!=ReconciliationView.Auto || !Store.VisibleRows().Any())" @onclick="AcceptVisible">Aceptar visibles</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
+@if (!Store.IsLoaded && string.IsNullOrWhiteSpace(Store.LoadError))
+{
+  <div class="card" style="padding:24px; margin-top:16px;">
+    <b>Cargando conciliación…</b>
+  </div>
+}
+else if (!string.IsNullOrWhiteSpace(Store.LoadError))
+{
+  <div class="card" style="padding:24px; margin-top:16px; border:1px solid rgba(239,68,68,.30);">
+    <b>@LoadErrorTitle</b>
+    <div style="margin-top:8px; color:var(--muted);">@LoadErrorMessage</div>
+  </div>
+}
+else
+{
+<div class="runProgress card">
+  <div class="runProgressTop">
+    <div>
+      <div class="runProgressTitle">Progreso de conciliación</div>
+      <div class="runProgressSub">@ResolvedCount de @Store.Rows.Count casos resueltos</div>
     </div>
-<aside class="drawer @(Store.DrawerOpen ? "open" : "")" aria-hidden="@(!Store.DrawerOpen)">
-  <div class="drawerHead">
-    <div style="display:flex; flex-direction:column; gap:2px; min-width:0;">
-      <b>@(Store.SelectedRow is null ? "Resolver caso" : $"Resolver · {Store.SelectedRow.Customer}")</b>
-      <span class="small">@DrawerSub()</span>
+
+    <div class="runProgressActions">
+      <span class="small">Hotkeys: 1 · 2 · 3 · A · X · V · Esc · Ctrl/Cmd+K</span>
     </div>
-    <button class="iconBtn" title="Cerrar" @onclick="CloseDrawer">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
-    </button>
   </div>
 
-  <div class="drawerBody">
-    @if (Store.SelectedRow is null)
-    {
-      <div class="callout">Seleccioná una fila para ver el detalle.</div>
-    }
-    else
-    {
-      var r = Store.SelectedRow;
-      <div class="callout"><b>Sugerencia:</b> @r!.Suggestion <span class="small">· Conf @r.Confidence</span></div>
-
-      <div class="list" style="margin-top:12px;">
-        <div class="row">
-          <div class="meta"><b>Resumen</b><small>Deuda #@r.DebtRowNumber (@ReconciliationStore.Money(r.DebtAmount)) ↔ Pago #@r.PaymentRowNumber (@ReconciliationStore.Money(r.PaymentAmount)) · Δ @r.Delta</small></div>
-          <span class="chip neutral">@r.Status</span>
-        </div>
-        <div class="row">
-          <div class="meta"><b>Evidencia</b><small>@r.Evidence</small></div>
-          <span class="chip neutral">@r.Confidence</span>
-        </div>
-        <div class="row">
-          <div class="meta"><b>Regla aplicada</b><small>@r.Rule</small></div>
-          <span class="chip neutral">@TypeLabel(r.Type)</span>
-        </div>
-      </div>
-    }
+  <div class="progressBar">
+    <div class="progressBarFill" style="width:@($"{RunProgressPct}%")"></div>
   </div>
 
-  <div class="drawerFooter">
-    <span style="flex:1"></span>
-    <button class="btn danger" disabled="@(Store.SelectedRow is null)" @onclick="MarkException">Marcar excepción</button>
-    <button class="btn primary" disabled="@(Store.SelectedRow is null)" @onclick="AcceptOne">Aceptar</button>
-  </div>
-</aside>
-
-<div class="footerBar">
-  <div class="footerInner">
-    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; color:var(--muted); font-size:12px;">
-      <span><b>Vista:</b> @ViewName()</span>
-      <span>·</span>
-      <span><b>Seleccionada:</b> @(Store.SelectedRow is null ? "—" : $"Deuda #{Store.SelectedRow.DebtRowNumber} ↔ Pago #{Store.SelectedRow.PaymentRowNumber}")</span>
-      <span>·</span>
-      <span><b>Estado run:</b> @(Store.CanConfirm ? "Listo para confirmar" : "Requiere resolución")</span>
-    </div>
-
-    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-      <button class="btn primary" disabled="@(Store.View!=ReconciliationView.Auto)" @onclick="AcceptVisible">Aceptar visibles</button>
-      <button class="btn primary" disabled="@(!Store.CanConfirm)">Confirmar conciliación</button>
-    </div>
+  <div class="runProgressMeta">
+    <span>Resueltos <b>@ResolvedCount</b></span>
+    <span>Automáticos <b>@Store.AutoCount</b></span>
+    <span>Pendientes <b>@Store.PendingCount</b></span>
+    <span>Excepciones <b>@Store.ExceptionCount</b></span>
   </div>
 </div>
 
+@if (CommandPaletteOpen)
+{
+  <div class="commandOverlay" @onclick="ClosePalette"></div>
+
+  <div class="commandPalette card" role="dialog" aria-label="Acciones rápidas">
+    <div class="commandHead">
+      <b>Acciones rápidas</b>
+      <button class="iconBtn" title="Cerrar" @onclick="ClosePalette">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="commandBody">
+      <button class="commandItem" @onclick="PaletteViewAuto">
+        <span class="commandTitle">Ir a Automáticas</span>
+        <span class="commandHint">1</span>
+      </button>
+
+      <button class="commandItem" @onclick="PaletteViewPending">
+        <span class="commandTitle">Ir a Pendientes</span>
+        <span class="commandHint">2</span>
+      </button>
+
+      <button class="commandItem" @onclick="PaletteViewExceptions">
+        <span class="commandTitle">Ir a Excepciones</span>
+        <span class="commandHint">3</span>
+      </button>
+
+      <button class="commandItem" @onclick="PaletteAcceptVisible">
+        <span class="commandTitle">Aceptar visibles</span>
+        <span class="commandHint">V</span>
+      </button>
+
+      <button class="commandItem" @onclick="PaletteAcceptCurrent">
+        <span class="commandTitle">Aceptar caso abierto</span>
+        <span class="commandHint">A</span>
+      </button>
+
+      <button class="commandItem" @onclick="PaletteExceptionCurrent">
+        <span class="commandTitle">Marcar excepción del caso abierto</span>
+        <span class="commandHint">X</span>
+      </button>
+
+      <button class="commandItem" @onclick="PaletteFocusSearch">
+        <span class="commandTitle">Ir al buscador</span>
+        <span class="commandHint">F</span>
+      </button>
+    </div>
+  </div>
+}
+
+<div class="kpis compact">
+  <div class="card kpi">
+    <div class="label">Deudas <span class="mini">@($"{Store.DebtsRowsTotal} filas")</span></div>
+    <div class="value">@ReconciliationStore.Money(Store.DebtsAmtTotal)</div>
+  </div>
+  <div class="card kpi">
+    <div class="label">Pagos <span class="mini">@($"{Store.PaysRowsTotal} filas")</span></div>
+    <div class="value">@ReconciliationStore.Money(Store.PaysAmtTotal)</div>
+  </div>
+  <div class="card kpi">
+    <div class="label">Automáticas <span class="mini" style="color:rgba(187,255,212,.95)">Reglas</span></div>
+    <div class="value">@Store.AutoCount</div>
+  </div>
+  <div class="card kpi">
+    <div class="label">Pendientes <span class="mini" style="color:rgba(255,232,191,.98)">Revisar</span></div>
+    <div class="value">@Store.PendingCount</div>
+  </div>
+  <div class="card kpi">
+    <div class="label">Excepciones <span class="mini" style="color:rgba(255,203,203,.98)">Decidir</span></div>
+    <div class="value">@Store.ExceptionCount</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab @(Store.View==ReconciliationView.Auto?"active":"")" @onclick="() => SetView(ReconciliationView.Auto)">Automáticas (@Store.AutoCount)</button>
+  <button class="tab @(Store.View==ReconciliationView.Pending?"active":"")" @onclick="() => SetView(ReconciliationView.Pending)">Pendientes (@Store.PendingCount)</button>
+  <button class="tab @(Store.View==ReconciliationView.Exceptions?"active":"")" @onclick="() => SetView(ReconciliationView.Exceptions)">Excepciones (@Store.ExceptionCount)</button>
+
+  @if (Store.View == ReconciliationView.Auto)
+  {
+    <div class="pills" title="Filtro por confianza (solo Automáticas)">
+      <div class="pill @(Store.ConfFilter=="all"?"active":"")" @onclick="SetConfAll">Todas</div>
+      <div class="pill @(Store.ConfFilter=="Alta"?"active":"")" @onclick="SetConfAlta">Alta</div>
+      <div class="pill @(Store.ConfFilter=="Alta+Media"?"active":"")" @onclick="SetConfAltaMedia">Alta+Media</div>
+    </div>
+  }
+</div>
+
+<div class="layout">
+  <ReconciliationTable Store="Store"
+                       QueryChanged="OnQueryChanged"
+                       ClearSelectionRequested="ClearSelection"
+                       ToggleAllRequested="ToggleAll"
+                       ToggleOneRequested="ToggleOne"
+                       OpenDrawerRequested="OpenDrawer" />
+</div>
+
+<ReconciliationDrawer Store="Store"
+                      CloseRequested="CloseDrawer"
+                      AcceptRequested="AcceptOne"
+                      ExceptionRequested="MarkException" />
+
+<ReconciliationFooter Store="Store"
+                      AcceptVisibleRequested="AcceptVisible" />
+
+@if (!string.IsNullOrWhiteSpace(PageToast))
+{
+  <div class="pageToast">
+    @PageToast
+  </div>
+}
+}
+
 @code {
-  void SetView(ReconciliationView v) { Store.SetView(v); StateHasChanged(); }
+  [Parameter]
+  public string? RunId { get; set; }
 
-  void SetConfAll() { Store.SetConfFilter("all"); StateHasChanged(); }
-  void SetConfAlta() { Store.SetConfFilter("Alta"); StateHasChanged(); }
-  void SetConfAltaMedia() { Store.SetConfFilter("Alta+Media"); StateHasChanged(); }
+  private DotNetObjectReference<Reconciliation>? _objRef;
+  private bool CommandPaletteOpen;
+  private string? PageToast;
 
-  void OnQuery(ChangeEventArgs e) { Store.SetQuery(e.Value?.ToString() ?? ""); StateHasChanged(); }
+  private string? EffectiveRunId =>
+      !string.IsNullOrWhiteSpace(RunId) ? RunId : Store.RunId;
 
-  void ToggleOne(string key, ChangeEventArgs e)
+  private string LoadErrorTitle =>
+      IsNoDataError ? "Todavía no hay conciliaciones disponibles" : "Error al cargar conciliación";
+
+  private string LoadErrorMessage =>
+      IsNoDataError
+          ? "Subí deuda o pagos desde Imports para generar la primera conciliación."
+          : Store.LoadError ?? "";
+
+  private bool IsNoDataError =>
+      !string.IsNullOrWhiteSpace(Store.LoadError) &&
+      (Store.LoadError.Contains("404") ||
+       Store.LoadError.Contains("No hay una conciliación actual disponible", StringComparison.OrdinalIgnoreCase));
+
+  int ResolvedCount => Store.AutoCount + Store.ExceptionCount;
+  int RunProgressPct => Store.Rows.Count == 0 ? 0 : (int)Math.Round((double)ResolvedCount / Store.Rows.Count * 100);
+
+  protected override void OnInitialized()
   {
-      var on = e.Value is bool b && b;
-      Store.ToggleSelected(key, on);
-      StateHasChanged();
+    if (!Auth.IsAuthenticated)
+        Nav.NavigateTo("/login");
+    Store.OnChange += HandleStoreChange;
   }
 
-  void ToggleAll(ChangeEventArgs e)
+  protected override async Task OnParametersSetAsync()
   {
-      var on = e.Value is bool b && b;
-      Store.SelectAllVisible(on);
-      StateHasChanged();
+    await ReloadRunAsync();
   }
 
-  void ClearSelection()
+  protected override async Task OnAfterRenderAsync(bool firstRender)
   {
-      Store.Selected.Clear();
-      Store.CloseDrawer();
-      StateHasChanged();
+    if (firstRender)
+    {
+      _objRef = DotNetObjectReference.Create(this);
+      await JS.InvokeVoidAsync("reconciliationHotkeys.register", _objRef);
+    }
   }
 
-  void OpenDrawer(string key) { Store.OpenDrawer(key); StateHasChanged(); }
-  void CloseDrawer() { Store.CloseDrawer(); StateHasChanged(); }
-
-  void AcceptSelected() { Store.AcceptSelected(); StateHasChanged(); }
-  void AcceptVisible() { Store.AcceptVisible(); StateHasChanged(); }
-
-  void AcceptOne()
+  async Task ReloadRunAsync()
   {
-      if (Store.SelectedKey is null) return;
-      Store.AcceptByKey(Store.SelectedKey);
-      StateHasChanged();
-  }
+    Store.Selected.Clear();
+    Store.CloseDrawer();
 
-  void MarkException()
-  {
-      if (Store.SelectedKey is null) return;
-      Store.ExceptionByKey(Store.SelectedKey);
-      StateHasChanged();
-  }
+    try
+    {
+      ApiReconciliationRunDto? dto;
 
-  string ViewName() => Store.View switch
-  {
-      ReconciliationView.Auto => "Automáticas",
-      ReconciliationView.Pending => "Pendientes",
-      _ => "Excepciones"
-  };
-
-  string TableTitle() => Store.View switch
-  {
-      ReconciliationView.Auto => "Automáticas · operable",
-      ReconciliationView.Pending => "Pendientes · cola",
-      _ => "Excepciones · revisión"
-  };
-
-  string TableSubtitle() => Store.View switch
-  {
-      ReconciliationView.Auto => "Seleccioná y aceptá en bloque. Click en fila para resolver en drawer.",
-      ReconciliationView.Pending => "Resolvé rápido con drawer.",
-      _ => "Investigá en drawer y decidí."
-  };
-
-  string DrawerSub()
-  {
-      var r = Store.SelectedRow;
-      if (r is null) return "Click en una fila para ver evidencia";
-      return $"{TypeLabel(r.Type)} · {r.Rule} · Conf {r.Confidence}";
-  }
-
-  static string TypeIcon(ReconMatchType t) => t switch
-  {
-      ReconMatchType.Exact => "=",
-      ReconMatchType.Partial => "≋",
-      ReconMatchType.Multi => "⇄",
-      ReconMatchType.Dup => "⧉",
-      ReconMatchType.Amb => "?",
-      _ => "∅"
-  };
-
-  static string TypeLabel(ReconMatchType t) => t switch
-  {
-      ReconMatchType.Exact => "Exacto",
-      ReconMatchType.Partial => "Parcial",
-      ReconMatchType.Multi => "Multi",
-      ReconMatchType.Dup => "Duplicado",
-      ReconMatchType.Amb => "Ambiguo",
-      _ => "Sin match"
-  };
-
-  static string DeltaText(decimal d) => (d > 0 ? "+" : "") + d.ToString("0");
-  static string DeltaClass(decimal d)
-  {
-      var abs = Math.Abs(d);
-      if (abs == 0) return "ok";
-      if (abs <= 50) return "warn";
-      return "bad";
-  }
-
-  static string RiskLevel(ReconciliationRow r)
-  {
-      if (r.Status == RowStatus.Exception) return "high";
-      if (r.Type is ReconMatchType.Dup or ReconMatchType.Amb or ReconMatchType.NoMatch) return "high";
-      if (r.Type == ReconMatchType.Partial || Math.Abs(r.Delta) > 0) return "mid";
-      if (r.Confidence == Confidence.Alta && Math.Abs(r.Delta) == 0) return "low";
-      return "mid";
-  }
-
-  MarkupString RiskCell(ReconciliationRow r)
-  {
-      var rk = RiskLevel(r);
-      var label = rk == "low" ? "Bajo" : rk == "mid" ? "Medio" : "Alto";
-      return (MarkupString)$@"
-        <span class=""risk {rk}"">
-          <span class=""riskDot""></span>
-          {label}
-          <small>· {r.Confidence}</small>
-        </span>";
-  }
-
-  MarkupString StatusChip(RowStatus s)
-  {
-      return s switch
+      if (string.IsNullOrWhiteSpace(RunId))
       {
-          RowStatus.Ok => (MarkupString)@"<span class=""chip good"">Auto</span>",
-          RowStatus.Pending => (MarkupString)@"<span class=""chip warn"">Pendiente</span>",
-          _ => (MarkupString)@"<span class=""chip bad"">Excepción</span>"
-      };
+        dto = await ApiClient.GetCurrentRunAsync(Auth.CompanyId);
+        if (dto is null)
+        {
+          Store.SetLoadError("No hay una conciliación actual disponible para esta company.");
+          return;
+        }
+      }
+      else
+      {
+        dto = await ApiClient.GetRunAsync(RunId);
+        if (dto is null)
+        {
+          Store.SetLoadError("La API devolvió una respuesta vacía.");
+          return;
+        }
+      }
+
+      Store.LoadFromApi(dto);
+    }
+    catch (Exception ex)
+    {
+      Store.SetLoadError(ex.Message);
+    }
   }
 
-  MarkupString SuggestionChip(ReconciliationRow r)
+  void HandleStoreChange()
   {
-      var rk = RiskLevel(r);
-      var cls = rk == "high" ? "bad" : rk == "mid" ? "warn" : "good";
-      return (MarkupString)$@"<span class=""chip {cls}"">{r.Suggestion}</span>";
+    InvokeAsync(StateHasChanged);
+  }
+
+  public void Dispose()
+  {
+    Store.OnChange -= HandleStoreChange;
+    _ = JS.InvokeVoidAsync("reconciliationHotkeys.unregister");
+    _objRef?.Dispose();
+  }
+
+  [JSInvokable]
+  public async Task HandleHotkey(string action)
+  {
+    switch (action)
+    {
+      case "togglePalette":
+        CommandPaletteOpen = !CommandPaletteOpen;
+        break;
+      case "closeContext":
+        if (CommandPaletteOpen) CommandPaletteOpen = false;
+        else if (Store.DrawerOpen) Store.CloseDrawer();
+        break;
+      case "viewAuto":
+        Store.SetView(ReconciliationView.Auto);
+        CommandPaletteOpen = false;
+        break;
+      case "viewPending":
+        Store.SetView(ReconciliationView.Pending);
+        CommandPaletteOpen = false;
+        break;
+      case "viewExceptions":
+        Store.SetView(ReconciliationView.Exceptions);
+        CommandPaletteOpen = false;
+        break;
+      case "acceptVisible":
+        if (Store.View == ReconciliationView.Auto && Store.VisibleRows().Any())
+          await AcceptVisible();
+        CommandPaletteOpen = false;
+        break;
+      case "acceptCurrent":
+        if (Store.SelectedKey is not null)
+          await AcceptOne();
+        CommandPaletteOpen = false;
+        break;
+      case "exceptionCurrent":
+        if (Store.SelectedKey is not null)
+          await MarkException();
+        CommandPaletteOpen = false;
+        break;
+      case "focusSearch":
+        CommandPaletteOpen = false;
+        await JS.InvokeVoidAsync("reconciliationHotkeys.focusSelector", ".reconcTable .search input");
+        break;
+    }
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  void ClosePalette() => CommandPaletteOpen = false;
+  Task PaletteViewAuto() => HandleHotkey("viewAuto");
+  Task PaletteViewPending() => HandleHotkey("viewPending");
+  Task PaletteViewExceptions() => HandleHotkey("viewExceptions");
+  Task PaletteAcceptVisible() => HandleHotkey("acceptVisible");
+  Task PaletteAcceptCurrent() => HandleHotkey("acceptCurrent");
+  Task PaletteExceptionCurrent() => HandleHotkey("exceptionCurrent");
+  Task PaletteFocusSearch() => HandleHotkey("focusSearch");
+
+  void SetView(ReconciliationView v) => Store.SetView(v);
+  void SetConfAll() => Store.SetConfFilter("all");
+  void SetConfAlta() => Store.SetConfFilter("Alta");
+  void SetConfAltaMedia() => Store.SetConfFilter("Alta+Media");
+
+  Task OnQueryChanged(string query)
+  {
+    Store.SetQuery(query);
+    return Task.CompletedTask;
+  }
+
+  Task ToggleOne((string Key, bool On) args)
+  {
+    Store.ToggleSelected(args.Key, args.On);
+    return Task.CompletedTask;
+  }
+
+  Task ToggleAll(bool on)
+  {
+    Store.SelectAllVisible(on);
+    return Task.CompletedTask;
+  }
+
+  Task ClearSelection()
+  {
+    Store.Selected.Clear();
+    Store.CloseDrawer();
+    return Task.CompletedTask;
+  }
+
+  Task OpenDrawer(string key)
+  {
+    Store.OpenDrawer(key);
+    return Task.CompletedTask;
+  }
+
+  Task CloseDrawer()
+  {
+    Store.CloseDrawer();
+    return Task.CompletedTask;
+  }
+
+  async Task AcceptVisible()
+  {
+    var runId = EffectiveRunId;
+    if (string.IsNullOrWhiteSpace(runId)) return;
+
+    var ids = Store.VisibleRows().Select(x => x.Key).ToList();
+    if (ids.Count == 0) return;
+
+    var ok = await ApiClient.BulkAcceptAsync(runId, ids);
+    if (ok)
+    {
+      await ReloadRunAsync();
+      await ShowPageToast("✔ Casos visibles aceptados");
+    }
+  }
+
+  async Task AcceptOne()
+  {
+    var runId = EffectiveRunId;
+    if (string.IsNullOrWhiteSpace(runId) || Store.SelectedKey is null) return;
+
+    var ok = await ApiClient.AcceptCaseAsync(runId, Store.SelectedKey);
+    if (ok)
+    {
+      await ReloadRunAsync();
+      Store.CloseDrawer();
+      await ShowPageToast("✔ Caso aceptado");
+    }
+  }
+
+  async Task MarkException()
+  {
+    var runId = EffectiveRunId;
+    if (string.IsNullOrWhiteSpace(runId) || Store.SelectedKey is null) return;
+
+    var ok = await ApiClient.MarkExceptionAsync(runId, Store.SelectedKey);
+    if (ok)
+    {
+      await ReloadRunAsync();
+      Store.CloseDrawer();
+      await ShowPageToast("⚠ Marcado como excepción");
+    }
+  }
+
+  async Task ShowPageToast(string message)
+  {
+    PageToast = message;
+    await InvokeAsync(StateHasChanged);
+    await Task.Delay(1800);
+    PageToast = null;
+    await InvokeAsync(StateHasChanged);
   }
 }

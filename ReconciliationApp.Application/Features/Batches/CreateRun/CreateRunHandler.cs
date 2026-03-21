@@ -30,10 +30,15 @@ public sealed class CreateRunHandler
         if (batch is null)
             throw new InvalidOperationException("Batch not found.");
 
+        // Si ya existe un run activo (el current), lo devolvemos sin crear uno nuevo.
+        // Esto hace que el flujo de imports sea idempotente: llamar CreateRun
+        // múltiples veces sobre el mismo batch siempre devuelve el run activo.
+        var existingRun = await _runs.GetCurrentByBatchIdAsync(command.BatchId, ct);
+        if (existingRun is not null)
+            return new CreateRunResult(command.BatchId, existingRun.RunNumber, existingRun.CreatedAt);
+
         var runNumber = await _runNumberService.IncrementAndGetAsync(command.BatchId, ct);
-
         var run = new BatchRun(command.BatchId, runNumber);
-
         await _runs.AddAsync(run, ct);
         await _uow.SaveChangesAsync(ct);
 

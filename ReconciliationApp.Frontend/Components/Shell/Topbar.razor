@@ -1,0 +1,43 @@
+@using Microsoft.AspNetCore.Components.Web
+@using ReconciliationApp.Frontend.State
+@inject LayoutState Layout
+@inject AuthState Auth
+
+<div class="header card">
+    <div class="hLeft">
+        <button id="btnMenu"
+                type="button"
+                class="iconBtn"
+                title="Menú"
+                aria-label="Abrir menú"
+                aria-controls="appSidebar"
+                aria-expanded="@(Layout.IsSidebarOpen ? "true" : "false")"
+                @onclick="OnMenuClick">
+            <svg class="icon" viewBox="0 0 24 24">
+                <path d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+        </button>
+
+        <div class="hLogo" title="Logo empresa">AG</div>
+
+        <div class="hCompany">
+            <b>@(Auth.CompanyName)</b>
+            <span>Conciliación · Periodo <span class="mono">Mar 2026</span> · Run <span class="mono">#2</span></span>
+        </div>
+    </div>
+
+    <div class="hRight">
+        <div class="badge"><span class="dot good"></span> Auto <b style="color:var(--text); font-weight:950;">—</b></div>
+        <div class="badge"><span class="dot warn"></span> Pendientes <b style="color:var(--text); font-weight:950;">—</b></div>
+        <div class="badge"><span class="dot bad"></span> Excepciones <b style="color:var(--text); font-weight:950;">—</b></div>
+    </div>
+</div>
+
+@code {
+    private void OnMenuClick()
+    {
+        Console.WriteLine($"[Topbar] OnMenuClick -> before toggle: {Layout.IsSidebarOpen}");
+        Layout.ToggleSidebar();
+        Console.WriteLine($"[Topbar] OnMenuClick -> after toggle: {Layout.IsSidebarOpen}");
+    }
+}

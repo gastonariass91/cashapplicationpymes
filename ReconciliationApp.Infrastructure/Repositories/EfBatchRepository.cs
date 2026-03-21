@@ -18,6 +18,17 @@ public sealed class EfBatchRepository : IBatchRepository
             .Include(x => x.Runs)
             .FirstOrDefaultAsync(x => x.Id == id, ct);
 
+    public Task<ReconciliationBatch?> GetByCompanyAndPeriodAsync(
+        Guid companyId,
+        DateOnly from,
+        DateOnly to,
+        CancellationToken ct = default) =>
+        _db.Batches
+            .Include(x => x.Runs)
+            .FirstOrDefaultAsync(
+                x => x.CompanyId == companyId && x.PeriodFrom == from && x.PeriodTo == to,
+                ct);
+
     public Task<bool> ExistsForPeriodAsync(Guid companyId, DateOnly from, DateOnly to, CancellationToken ct = default) =>
         _db.Batches.AnyAsync(x => x.CompanyId == companyId && x.PeriodFrom == from && x.PeriodTo == to, ct);
 }

@@ -1,0 +1,116 @@
+@using ReconciliationApp.Frontend.Models
+@using ReconciliationApp.Frontend.State
+
+<div class="drawerOverlay @(Store.DrawerOpen ? "show" : "")" @onclick="OnCloseRequested"></div>
+
+<aside class="drawer @(Store.DrawerOpen ? "open" : "")" aria-hidden="@(!Store.DrawerOpen)">
+  <div class="drawerHead">
+    <div class="rdHeader">
+      <div class="rdTitleWrap">
+        <span class="rdEyebrow">Resolver caso</span>
+        <b class="rdTitle">@(Store.SelectedRow is null ? "Sin selección" : $"Resolver · {Store.SelectedRow.Customer}")</b>
+        <span class="rdSubtitle">@DrawerSub()</span>
+      </div>
+
+      <button class="iconBtn rdCloseBtn" title="Cerrar" aria-label="Cerrar drawer" @onclick="OnCloseRequested">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="drawerBody">
+    @if (Store.SelectedRow is null)
+    {
+      <div class="callout rdSuggestion">
+        <b>Sin caso seleccionado</b>
+        <span>Elegí una fila de la tabla para ver el detalle y resolverla.</span>
+      </div>
+    }
+    else
+    {
+      var r = Store.SelectedRow;
+
+      <div class="rdMetrics">
+        <div class="rdMetric">
+          <span class="rdMetricLabel">Deuda</span>
+          <b class="rdMetricValue">@ReconciliationStore.Money(r.DebtAmount)</b>
+        </div>
+
+        <div class="rdMetric">
+          <span class="rdMetricLabel">Pago</span>
+          <b class="rdMetricValue">@ReconciliationStore.Money(r.PaymentAmount)</b>
+        </div>
+
+        <div class="rdMetric">
+          <span class="rdMetricLabel">Δ</span>
+          <b class="rdMetricValue delta @ReconciliationUi.DeltaClass(r.Delta)">@ReconciliationStore.Money(r.Delta)</b>
+        </div>
+      </div>
+
+      <div class="callout rdSuggestion">
+        <b>Sugerencia</b>
+        <span>@r.Suggestion</span>
+      </div>
+
+      <div class="rdSection">
+        <div class="rdSectionTitle">Contexto del caso</div>
+
+        <div class="rdContextGrid">
+          <div class="rdCard">
+            <span class="rdCardLabel">Tipo</span>
+            <b class="rdCardValue">@ReconciliationUi.TypeLabel(r.Type)</b>
+          </div>
+
+          <div class="rdCard">
+            <span class="rdCardLabel">Confianza</span>
+            <b class="rdCardValue">@r.Confidence</b>
+          </div>
+
+          <div class="rdCard">
+            <span class="rdCardLabel">Regla aplicada</span>
+            <b class="rdCardValue">@r.Rule</b>
+          </div>
+
+          <div class="rdCard rdCardWide">
+            <span class="rdCardLabel">Evidencia</span>
+            <b class="rdCardValue">@r.Evidence</b>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="drawerFooter">
+    <span class="rdFooterSpacer"></span>
+
+    <button class="btn danger"
+            disabled="@(Store.SelectedRow is null)"
+            @onclick="OnExceptionRequested">
+      Marcar excepción
+    </button>
+
+    <button class="btn primary"
+            disabled="@(Store.SelectedRow is null)"
+            @onclick="OnAcceptRequested">
+      Aceptar
+    </button>
+  </div>
+</aside>
+
+@code {
+  [Parameter, EditorRequired] public ReconciliationStore Store { get; set; } = default!;
+  [Parameter] public EventCallback CloseRequested { get; set; }
+  [Parameter] public EventCallback AcceptRequested { get; set; }
+  [Parameter] public EventCallback ExceptionRequested { get; set; }
+
+  Task OnCloseRequested() => CloseRequested.InvokeAsync();
+  Task OnAcceptRequested() => AcceptRequested.InvokeAsync();
+  Task OnExceptionRequested() => ExceptionRequested.InvokeAsync();
+
+  string DrawerSub()
+  {
+    if (Store.SelectedRow is null) return "Seleccioná una fila de la tabla";
+    var r = Store.SelectedRow;
+    return $"{ReconciliationUi.TypeLabel(r.Type)} · {r.Rule}";
+  }
+}

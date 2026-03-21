@@ -6,7 +6,7 @@ public sealed class BatchRun
 
     public Guid BatchId { get; private set; }
 
-    public ReconciliationBatch Batch { get; private set; } = default!; // 🔥 navegación
+    public ReconciliationBatch Batch { get; private set; } = default!;
 
     public int RunNumber { get; private set; }
 
@@ -16,8 +16,16 @@ public sealed class BatchRun
 
     public void MarkReconciled(DateTimeOffset? at = null)
     {
-        if (ReconciledAt is not null) return;
         ReconciledAt = at ?? DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Permite re-ejecutar el motor de conciliación sobre este run.
+    /// Usado por el modelo online: cada import actualiza el estado actual.
+    /// </summary>
+    public void ResetReconciled()
+    {
+        ReconciledAt = null;
     }
 
     private BatchRun() { } // EF

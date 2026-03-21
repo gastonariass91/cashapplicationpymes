@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using ReconciliationApp.Domain.Entities.Core;
+using ReconciliationApp.Domain.Enums;
 
 namespace ReconciliationApp.Infrastructure.Persistence.Configurations;
 
@@ -20,9 +21,14 @@ public sealed class CompanyConfiguration : IEntityTypeConfiguration<Company>
             .HasColumnName("auto_apply_score_threshold")
             .IsRequired();
 
+        // Persiste el enum como string ("Validation" / "Automatic") en lugar de int,
+        // así la DB es legible sin necesidad de un diccionario externo.
         builder.Property(x => x.ReconciliationMode)
             .HasColumnName("reconciliation_mode")
             .HasMaxLength(30)
+            .HasConversion(
+                v => v.ToString(),
+                v => Enum.Parse<ReconciliationMode>(v))
             .IsRequired();
     }
 }

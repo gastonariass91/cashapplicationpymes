@@ -17,7 +17,7 @@ namespace ReconciliationApp.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.24")
+                .HasAnnotation("ProductVersion", "8.0.25")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -122,11 +122,20 @@ namespace ReconciliationApp.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("company_id");
 
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
                     b.Property<string>("CustomerKey")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("customer_key");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("email");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -134,12 +143,240 @@ namespace ReconciliationApp.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CompanyId", "CustomerKey")
                         .IsUnique();
 
+                    b.HasIndex("CompanyId", "Email");
+
                     b.ToTable("customers", (string)null);
+                });
+
+            modelBuilder.Entity("ReconciliationApp.Domain.Entities.Core.Debt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("closed_at");
+
+                    b.Property<string>("ClosedReason")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("closed_reason");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("currency");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("due_date");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("invoice_number");
+
+                    b.Property<DateOnly>("IssueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("issue_date");
+
+                    b.Property<decimal>("OutstandingAmount")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("outstanding_amount");
+
+                    b.Property<Guid?>("SourceBatchRunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_batch_run_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("CompanyId", "CustomerId");
+
+                    b.HasIndex("CompanyId", "InvoiceNumber");
+
+                    b.HasIndex("CompanyId", "Status");
+
+                    b.HasIndex("CompanyId", "CustomerId", "InvoiceNumber")
+                        .IsUnique();
+
+                    b.ToTable("debts", (string)null);
+                });
+
+            modelBuilder.Entity("ReconciliationApp.Domain.Entities.Core.Payment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AccountNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("account_number");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("currency");
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<string>("PayerTaxId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("payer_tax_id");
+
+                    b.Property<DateOnly>("PaymentDate")
+                        .HasColumnType("date")
+                        .HasColumnName("payment_date");
+
+                    b.Property<string>("PaymentNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("payment_number");
+
+                    b.Property<Guid?>("SourceBatchRunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_batch_run_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("CompanyId", "PayerTaxId");
+
+                    b.HasIndex("CompanyId", "PaymentDate");
+
+                    b.HasIndex("CompanyId", "PaymentNumber")
+                        .IsUnique();
+
+                    b.HasIndex("CompanyId", "Status");
+
+                    b.ToTable("payments", (string)null);
+                });
+
+            modelBuilder.Entity("ReconciliationApp.Domain.Entities.Core.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("full_name");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<DateTimeOffset?>("LastLoginAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_login_at");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("password_hash");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("role");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("CompanyId", "Role");
+
+                    b.ToTable("users", (string)null);
                 });
 
             modelBuilder.Entity("ReconciliationApp.Domain.Entities.Imports.ImportRow", b =>
@@ -214,6 +451,141 @@ namespace ReconciliationApp.Infrastructure.Persistence.Migrations
                     b.ToTable("reconciliation_matches", (string)null);
                 });
 
+            modelBuilder.Entity("ReconciliationApp.Domain.Entities.ReconciliationReview.ReconciliationCase", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CaseId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("case_id");
+
+                    b.Property<string>("Confidence")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("confidence");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Customer")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("customer");
+
+                    b.Property<decimal>("DebtAmount")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("debt_amount");
+
+                    b.Property<int?>("DebtRowNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("debt_row_number");
+
+                    b.Property<decimal>("Delta")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("delta");
+
+                    b.Property<string>("Evidence")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("evidence");
+
+                    b.Property<string>("MatchType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("match_type");
+
+                    b.Property<decimal>("PaymentAmount")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("payment_amount");
+
+                    b.Property<int?>("PaymentRowNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("payment_row_number");
+
+                    b.Property<Guid>("ReconciliationRunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reconciliation_run_id");
+
+                    b.Property<string>("Rule")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("rule");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Suggestion")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("suggestion");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReconciliationRunId", "CaseId")
+                        .IsUnique();
+
+                    b.ToTable("reconciliation_cases", (string)null);
+                });
+
+            modelBuilder.Entity("ReconciliationApp.Domain.Entities.ReconciliationReview.ReconciliationRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BatchRunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("batch_run_id");
+
+                    b.Property<DateTimeOffset?>("ConfirmedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("confirmed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("PublicRunId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("public_run_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchRunId")
+                        .IsUnique();
+
+                    b.HasIndex("PublicRunId")
+                        .IsUnique();
+
+                    b.ToTable("reconciliation_runs", (string)null);
+                });
+
             modelBuilder.Entity("ReconciliationApp.Domain.Entities.Batching.BatchRun", b =>
                 {
                     b.HasOne("ReconciliationApp.Domain.Entities.Batching.ReconciliationBatch", "Batch")
@@ -226,6 +598,54 @@ namespace ReconciliationApp.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("ReconciliationApp.Domain.Entities.Core.Customer", b =>
+                {
+                    b.HasOne("ReconciliationApp.Domain.Entities.Core.Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Company");
+                });
+
+            modelBuilder.Entity("ReconciliationApp.Domain.Entities.Core.Debt", b =>
+                {
+                    b.HasOne("ReconciliationApp.Domain.Entities.Core.Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ReconciliationApp.Domain.Entities.Core.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Company");
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("ReconciliationApp.Domain.Entities.Core.Payment", b =>
+                {
+                    b.HasOne("ReconciliationApp.Domain.Entities.Core.Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ReconciliationApp.Domain.Entities.Core.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Company");
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("ReconciliationApp.Domain.Entities.Core.User", b =>
                 {
                     b.HasOne("ReconciliationApp.Domain.Entities.Core.Company", "Company")
                         .WithMany()
@@ -258,9 +678,36 @@ namespace ReconciliationApp.Infrastructure.Persistence.Migrations
                     b.Navigation("BatchRun");
                 });
 
+            modelBuilder.Entity("ReconciliationApp.Domain.Entities.ReconciliationReview.ReconciliationCase", b =>
+                {
+                    b.HasOne("ReconciliationApp.Domain.Entities.ReconciliationReview.ReconciliationRun", "Run")
+                        .WithMany("Cases")
+                        .HasForeignKey("ReconciliationRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Run");
+                });
+
+            modelBuilder.Entity("ReconciliationApp.Domain.Entities.ReconciliationReview.ReconciliationRun", b =>
+                {
+                    b.HasOne("ReconciliationApp.Domain.Entities.Batching.BatchRun", "BatchRun")
+                        .WithMany()
+                        .HasForeignKey("BatchRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BatchRun");
+                });
+
             modelBuilder.Entity("ReconciliationApp.Domain.Entities.Batching.ReconciliationBatch", b =>
                 {
                     b.Navigation("Runs");
+                });
+
+            modelBuilder.Entity("ReconciliationApp.Domain.Entities.ReconciliationReview.ReconciliationRun", b =>
+                {
+                    b.Navigation("Cases");
                 });
 #pragma warning restore 612, 618
         }
