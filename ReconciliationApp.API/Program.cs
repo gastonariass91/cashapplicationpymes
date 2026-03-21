@@ -126,6 +126,7 @@ app.UseAuthorization();
 app.MapHealthEndpoints();
 app.MapAuthEndpoints();           // POST /auth/login (público), POST /auth/register (Admin)
 app.MapCompanyEndpoints();
+app.MapCustomerEndpoints();
 app.MapBatchEndpoints();
 app.MapImportEndpoints();
 app.MapReconciliationEndpoints();

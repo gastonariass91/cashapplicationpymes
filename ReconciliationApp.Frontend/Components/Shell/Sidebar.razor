@@ -17,10 +17,9 @@
 
     <div class="sTop">
         <div class="brandMark">
-            <div class="companyLogo">AG</div>
+            <div class="companyLogo">@(Auth.CompanyName?.Substring(0,2).ToUpper() ?? "CA")</div>
             <div class="brandText">
                 <b>@(Auth.CompanyName)</b>
-                <span>Conciliación PyMEs</span>
             </div>
         </div>
 
@@ -59,6 +58,19 @@
             </div>
         </NavLink>
 
+        <NavLink class="navItem" href="/customers" Match="NavLinkMatch.Prefix" @onclick="Layout.CloseSidebar">
+            <svg class="icon" viewBox="0 0 24 24">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <div class="text">
+                <div class="label">Clientes</div>
+                <div class="sub">Directorio</div>
+            </div>
+        </NavLink>
+
         <NavLink class="navItem" href="/reports" Match="NavLinkMatch.Prefix" @onclick="Layout.CloseSidebar">
             <svg class="icon" viewBox="0 0 24 24">
                 <path d="M4 19V5"/>
@@ -76,10 +88,10 @@
     <div class="sBottom">
         <div class="userCard">
             <div class="userInfo">
-                <div class="avatar">GA</div>
+                <div class="avatar">@(Auth.FullName?.Substring(0,2).ToUpper() ?? "US")</div>
                 <div class="userMeta">
-                    <b>Gasti</b>
-                    <span>Administración</span>
+                    <b>@(Auth.FullName ?? "Usuario")</b>
+                    <span>@(Auth.Role ?? "")</span>
                 </div>
             </div>
 
@@ -92,14 +104,6 @@
                     <path d="M19.4 15a7.8 7.8 0 0 0 .1-1l2-1.5-2-3.4-2.4 1a7.7 7.7 0 0 0-1.7-1l-.3-2.6H10l-.3 2.6a7.7 7.7 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.5a7.8 7.8 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7.7 7.7 0 0 0 1.7 1l.3 2.6h4.1l.3-2.6a7.7 7.7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.5z"/>
                 </svg>
             </button>
-        </div>
-
-        <div class="shortcutHint">
-            Atajos: <span class="mono">⌘K</span> buscar ·
-            <span class="mono">A</span> aceptar ·
-            <span class="mono">X</span> excepción ·
-            <span class="mono">N</span> siguiente ·
-            <span class="mono">Esc</span> cerrar
         </div>
     </div>
 </aside>

@@ -1,0 +1,167 @@
+@page "/customers"
+@inject AuthState Auth
+@inject NavigationManager Nav
+@inject ReconciliationApiClient ApiClient
+
+<PageTitle>Clientes · Cash Application</PageTitle>
+
+<div class="page-customers">
+    <div class="page-header">
+        <div>
+            <h1>Clientes</h1>
+            <p>@_total cliente@(_total == 1 ? "" : "s") registrado@(_total == 1 ? "" : "s")</p>
+        </div>
+        <div class="header-search">
+            <input type="text"
+                   placeholder="Buscar por nombre o CUIT..."
+                   @bind="_query"
+                   @bind:event="oninput"
+                   class="search-input" />
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="loading-state">
+            <div class="spinner-lg"></div>
+            <span>Cargando clientes...</span>
+        </div>
+    }
+    else if (_error is not null)
+    {
+        <div class="error-state">@_error</div>
+    }
+    else if (_filtered.Count == 0)
+    {
+        <div class="empty-state">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <p>@(_query.Length > 0 ? "No hay clientes que coincidan" : "No hay clientes registrados")</p>
+            @if (_query.Length == 0)
+            {
+                <span>Importá un CSV de deudas para registrar clientes automáticamente</span>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="table-wrapper">
+            <table class="customers-table">
+                <thead>
+                    <tr>
+                        <th>CUIT / Clave</th>
+                        <th>Nombre</th>
+                        <th>Email</th>
+                        <th>Registrado</th>
+                        <th>Actualizado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in _filtered)
+                    {
+                        <tr>
+                            <td><span class="mono key-badge">@c.CustomerKey</span></td>
+                            <td>
+                                <div class="customer-name">
+                                    <div class="avatar-sm">@(c.Name.Substring(0, Math.Min(2, c.Name.Length)).ToUpper())</div>
+                                    <span>@c.Name</span>
+                                </div>
+                            </td>
+                            <td class="email-cell">@(c.Email ?? "—")</td>
+                            <td class="date-cell">@c.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                            <td class="date-cell">@c.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (_query.Length > 0)
+        {
+            <div class="results-hint">@_filtered.Count de @_total clientes</div>
+        }
+    }
+</div>
+
+<style>
+    .page-customers { padding: 2rem; max-width: 1100px; margin: 0 auto; }
+    .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.75rem; flex-wrap: wrap; }
+    .page-header h1 { font-size: 1.25rem; font-weight: 700; color: #f1f5f9; margin: 0 0 0.25rem; font-family: system-ui, sans-serif; }
+    .page-header p { font-size: 0.875rem; color: #64748b; margin: 0; font-family: system-ui, sans-serif; }
+    .search-input { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 0.5rem 0.875rem; font-size: 0.875rem; color: #f1f5f9; outline: none; width: 260px; font-family: system-ui, sans-serif; transition: border-color 0.15s; }
+    .search-input::placeholder { color: #334155; }
+    .search-input:focus { border-color: rgba(99,102,241,0.45); }
+    .table-wrapper { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+    .customers-table { width: 100%; border-collapse: collapse; font-family: system-ui, sans-serif; font-size: 0.875rem; }
+    .customers-table thead tr { border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .customers-table th { padding: 0.75rem 1rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
+    .customers-table td { padding: 0.875rem 1rem; color: #e2e8f0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .customers-table tbody tr:last-child td { border-bottom: none; }
+    .customers-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+    .key-badge { font-family: 'Courier New', monospace; font-size: 0.8125rem; background: rgba(99,102,241,0.1); color: #818cf8; padding: 0.2rem 0.5rem; border-radius: 4px; }
+    .customer-name { display: flex; align-items: center; gap: 0.625rem; }
+    .avatar-sm { width: 28px; height: 28px; border-radius: 50%; background: rgba(99,102,241,0.15); color: #818cf8; display: flex; align-items: center; justify-content: center; font-size: 0.6875rem; font-weight: 700; flex-shrink: 0; }
+    .email-cell { color: #64748b; }
+    .date-cell { color: #475569; font-size: 0.8125rem; }
+    .loading-state, .empty-state, .error-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; padding: 4rem 2rem; color: #475569; font-family: system-ui, sans-serif; text-align: center; }
+    .empty-state svg { color: #334155; }
+    .empty-state p { font-size: 0.9375rem; color: #64748b; margin: 0; }
+    .empty-state span { font-size: 0.8125rem; color: #334155; }
+    .error-state { color: #fca5a5; background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.15); border-radius: 8px; }
+    .spinner-lg { width: 24px; height: 24px; border: 2px solid rgba(255,255,255,0.1); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+    .results-hint { margin-top: 0.75rem; font-size: 0.8125rem; color: #475569; font-family: system-ui, sans-serif; }
+</style>
+
+@code {
+    private List<ReconciliationApiClient.CustomerDto> _all      = new();
+    private List<ReconciliationApiClient.CustomerDto> _filtered = new();
+    private string _query  = "";
+    private bool _loading  = true;
+    private string? _error = null;
+    private int _total     = 0;
+
+    protected override void OnInitialized()
+    {
+        if (!Auth.IsAuthenticated)
+            Nav.NavigateTo("/login");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Auth.IsAuthenticated) return;
+        try
+        {
+            _all    = await ApiClient.ListCustomersAsync(Auth.CompanyId) ?? new();
+            _total  = _all.Count;
+            ApplyFilter();
+        }
+        catch
+        {
+            _error = "No se pudieron cargar los clientes.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrWhiteSpace(_query)) { _filtered = _all; return; }
+        var q = _query.Trim().ToLowerInvariant();
+        _filtered = _all.Where(c =>
+            c.Name.ToLowerInvariant().Contains(q) ||
+            c.CustomerKey.ToLowerInvariant().Contains(q) ||
+            (c.Email?.ToLowerInvariant().Contains(q) ?? false)).ToList();
+    }
+
+    private string _prevQuery = "";
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (_query != _prevQuery) { _prevQuery = _query; ApplyFilter(); StateHasChanged(); }
+    }
+}

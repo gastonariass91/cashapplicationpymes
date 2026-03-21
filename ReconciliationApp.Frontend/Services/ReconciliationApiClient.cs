@@ -164,4 +164,13 @@ public sealed class ReconciliationApiClient
         var content = await response.Content.ReadAsStringAsync(ct);
         return (false, string.IsNullOrWhiteSpace(content) ? "No se pudo confirmar." : content);
     }
+
+    public sealed record CustomerDto(Guid Id, string CustomerKey, string Name, string? Email, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+
+    public async Task<List<CustomerDto>?> ListCustomersAsync(Guid companyId, CancellationToken ct = default)
+    {
+        SetAuthHeader();
+        return await _http.GetFromJsonAsync<List<CustomerDto>>(
+        $"api/companies/{companyId}/customers", cancellationToken: ct);
+    }
 }
