@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using ReconciliationApp.Frontend.Services
 @inject ReconciliationApiClient ApiClient
+@inject AuthState Auth
 @inject NavigationManager Navigation
 
 <PageTitle>Imports</PageTitle>
@@ -94,7 +95,6 @@
 
 @code {
   private const long MaxCsvSizeBytes = 5 * 1024 * 1024;
-  private static readonly Guid DefaultCompanyId = Guid.Parse("77e3c972-1323-40c2-ba1e-044723bc4c00");
 
   private Guid? _sessionBatchId;
   private int _sessionRunNumber;
@@ -222,7 +222,7 @@
 
       var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-      var batch = await ApiClient.CreateBatchAsync(DefaultCompanyId, today, today);
+      var batch = await ApiClient.CreateBatchAsync(Auth.CompanyId, today, today);
       if (batch is null)
           throw new InvalidOperationException("No se pudo obtener el batch.");
 

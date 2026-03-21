@@ -175,8 +175,6 @@ else
   private bool CommandPaletteOpen;
   private string? PageToast;
 
-  private static readonly Guid DefaultCompanyId = Guid.Parse("77e3c972-1323-40c2-ba1e-044723bc4c00");
-
   private string? EffectiveRunId =>
       !string.IsNullOrWhiteSpace(RunId) ? RunId : Store.RunId;
 
@@ -228,7 +226,7 @@ else
 
       if (string.IsNullOrWhiteSpace(RunId))
       {
-        dto = await ApiClient.GetCurrentRunAsync(DefaultCompanyId);
+        dto = await ApiClient.GetCurrentRunAsync(Auth.CompanyId);
         if (dto is null)
         {
           Store.SetLoadError("No hay una conciliación actual disponible para esta company.");
