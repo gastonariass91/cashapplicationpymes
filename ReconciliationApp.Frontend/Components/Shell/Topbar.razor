@@ -1,6 +1,7 @@
 @using Microsoft.AspNetCore.Components.Web
 @using ReconciliationApp.Frontend.State
 @inject LayoutState Layout
+@inject AuthState Auth
 
 <div class="header card">
     <div class="hLeft">
@@ -20,7 +21,7 @@
         <div class="hLogo" title="Logo empresa">AG</div>
 
         <div class="hCompany">
-            <b>Alimentos Garcia SA</b>
+            <b>@(Auth.CompanyName)</b>
             <span>Conciliación · Periodo <span class="mono">Mar 2026</span> · Run <span class="mono">#2</span></span>
         </div>
     </div>

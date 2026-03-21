@@ -10,6 +10,7 @@ public sealed record LoginResponseDto(
     string FullName,
     string Role,
     Guid CompanyId,
+    string CompanyName,
     DateTimeOffset ExpiresAt);
 
 public sealed class AuthApiClient

@@ -358,7 +358,7 @@
             }
 
             Auth.SetUser(result.Token, result.Email, result.FullName,
-                         result.Role, result.CompanyId, result.ExpiresAt);
+                         result.Role, result.CompanyId, result.CompanyName, result.ExpiresAt);
 
             Nav.NavigateTo("/reconciliation");
         }

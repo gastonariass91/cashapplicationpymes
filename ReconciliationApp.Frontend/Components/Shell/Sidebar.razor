@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Components.Routing
 @using ReconciliationApp.Frontend.State
 @inject LayoutState Layout
+@inject AuthState Auth
 @implements IDisposable
 
 @if (Layout.IsSidebarOpen)
@@ -18,7 +19,7 @@
         <div class="brandMark">
             <div class="companyLogo">AG</div>
             <div class="brandText">
-                <b>Alimentos Garcia SA</b>
+                <b>@(Auth.CompanyName)</b>
                 <span>Conciliación PyMEs</span>
             </div>
         </div>
