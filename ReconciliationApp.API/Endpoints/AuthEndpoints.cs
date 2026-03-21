@@ -25,6 +25,7 @@ public static class AuthEndpoints
                 result.FullName,
                 result.Role,
                 result.CompanyId,
+                result.CompanyName,
                 result.ExpiresAt));
         })
         .WithName("Login")
@@ -64,10 +65,12 @@ public static class AuthEndpoints
         string FullName,
         string Role,
         Guid CompanyId,
+        string CompanyName,
         DateTimeOffset ExpiresAt);
 
     public sealed record RegisterRequest(
         Guid CompanyId,
+        string CompanyName,
         string Email,
         string Password,
         string FullName,
