@@ -2,6 +2,7 @@
 @using ReconciliationApp.Frontend.State
 @inject LayoutState Layout
 @inject AuthState Auth
+@inject NavigationManager Nav
 
 <div class="header card">
     <div class="hLeft">
@@ -18,26 +19,94 @@
             </svg>
         </button>
 
-        <div class="hLogo" title="Logo empresa">AG</div>
+        <div class="hLogo">
+            @(string.IsNullOrEmpty(Auth.CompanyName) ? "CA" : Auth.CompanyName.Substring(0, Math.Min(2, Auth.CompanyName.Length)).ToUpper())
+        </div>
 
         <div class="hCompany">
             <b>@(Auth.CompanyName)</b>
-            <span>Conciliación · Periodo <span class="mono">Mar 2026</span> · Run <span class="mono">#2</span></span>
+            
         </div>
     </div>
 
     <div class="hRight">
-        <div class="badge"><span class="dot good"></span> Auto <b style="color:var(--text); font-weight:950;">—</b></div>
-        <div class="badge"><span class="dot warn"></span> Pendientes <b style="color:var(--text); font-weight:950;">—</b></div>
-        <div class="badge"><span class="dot bad"></span> Excepciones <b style="color:var(--text); font-weight:950;">—</b></div>
+        <div class="user-menu-wrapper" @onmouseenter="ShowMenu" @onmouseleave="HideMenu">
+            <div class="user-chip">
+                <div class="user-avatar">
+                    @(string.IsNullOrEmpty(Auth.FullName) ? "US" : Auth.FullName.Substring(0, Math.Min(2, Auth.FullName.Length)).ToUpper())
+                </div>
+                <div class="user-info">
+                    <b>@(Auth.FullName ?? "Usuario")</b>
+                    <span>@(Auth.Role ?? "")</span>
+                </div>
+                <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 9l6 6 6-6"/>
+                </svg>
+            </div>
+
+            @if (_menuOpen)
+            {
+                <div class="user-dropdown">
+                    <button class="dropdown-item" @onclick="GoToAccount">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        Mi cuenta
+                    </button>
+                    <div class="dropdown-divider"></div>
+                    <button class="dropdown-item danger" @onclick="Logout">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                            <polyline points="16 17 21 12 16 7"/>
+                            <line x1="21" y1="12" x2="9" y2="12"/>
+                        </svg>
+                        Cerrar sesión
+                    </button>
+                </div>
+            }
+        </div>
     </div>
 </div>
 
+<style>
+    .user-menu-wrapper { position: relative; }
+    .user-chip { display: flex; align-items: center; gap: 0.5rem; padding: 0.375rem 0.625rem; border-radius: 8px; cursor: pointer; transition: background 0.15s; border: 1px solid transparent; }
+    .user-chip:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.08); }
+    .user-avatar { width: 30px; height: 30px; border-radius: 50%; background: rgba(99,102,241,0.2); color: #818cf8; display: flex; align-items: center; justify-content: center; font-size: 0.6875rem; font-weight: 700; flex-shrink: 0; }
+    .user-info { display: flex; flex-direction: column; line-height: 1.2; }
+    .user-info b { font-size: 0.8125rem; color: #f1f5f9; font-weight: 600; }
+    .user-info span { font-size: 0.6875rem; color: #64748b; }
+    .chevron { width: 14px; height: 14px; color: #475569; flex-shrink: 0; }
+    .user-dropdown { position: absolute; top: calc(100% + 6px); right: 0; min-width: 180px; background: #1a1d27; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 0.375rem; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 100; animation: fadeIn 0.1s ease; }
+    @@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+    .dropdown-item { display: flex; align-items: center; gap: 0.625rem; width: 100%; padding: 0.5rem 0.75rem; background: none; border: none; border-radius: 6px; font-size: 0.875rem; color: #cbd5e1; cursor: pointer; transition: background 0.12s; text-align: left; font-family: system-ui, sans-serif; }
+    .dropdown-item svg { width: 15px; height: 15px; flex-shrink: 0; color: #64748b; }
+    .dropdown-item:hover { background: rgba(255,255,255,0.06); color: #f1f5f9; }
+    .dropdown-item.danger { color: #fca5a5; }
+    .dropdown-item.danger svg { color: #fca5a5; }
+    .dropdown-item.danger:hover { background: rgba(239,68,68,0.08); }
+    .dropdown-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 0.25rem 0; }
+</style>
+
 @code {
-    private void OnMenuClick()
+    private bool _menuOpen = false;
+
+    private void ShowMenu() => _menuOpen = true;
+    private void HideMenu() => _menuOpen = false;
+
+    private void GoToAccount()
     {
-        Console.WriteLine($"[Topbar] OnMenuClick -> before toggle: {Layout.IsSidebarOpen}");
-        Layout.ToggleSidebar();
-        Console.WriteLine($"[Topbar] OnMenuClick -> after toggle: {Layout.IsSidebarOpen}");
+        _menuOpen = false;
+        Nav.NavigateTo("/account");
     }
+
+    private void Logout()
+    {
+        _menuOpen = false;
+        Auth.ClearUser();
+        Nav.NavigateTo("/login");
+    }
+
+    private void OnMenuClick() => Layout.ToggleSidebar();
 }

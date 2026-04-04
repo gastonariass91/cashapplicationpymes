@@ -36,6 +36,8 @@ public sealed class ReconciliationStore
     public int PaysRowsTotal { get; private set; }
 
     public int AutoCount => _rows.Count(r => r.Status == RowStatus.Ok);
+    public int AutoResolvedCount => _rows.Count(r => r.Status == RowStatus.Ok && r.ResolvedBy == "auto");
+    public int ManualResolvedCount => _rows.Count(r => r.Status == RowStatus.Ok && r.ResolvedBy == "user");
     public int PendingCount => _rows.Count(r => r.Status == RowStatus.Pending);
     public int ExceptionCount => _rows.Count(r => r.Status == RowStatus.Exception);
     public int AutoRate => _rows.Count == 0 ? 0 : (int)Math.Round((double)AutoCount / _rows.Count * 100);
@@ -124,7 +126,8 @@ public sealed class ReconciliationStore
                 Confidence: MapConfidence(c.Confidence),
                 Type: MapMatchType(c.MatchType),
                 Evidence: c.Evidence,
-                Suggestion: c.Suggestion
+                Suggestion: c.Suggestion,
+                ResolvedBy: c.ResolvedBy
             ));
         }
 

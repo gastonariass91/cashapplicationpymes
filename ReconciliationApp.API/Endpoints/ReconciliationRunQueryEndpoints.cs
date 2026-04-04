@@ -130,7 +130,8 @@ public static class ReconciliationRunQueryEndpoints
                 x.Confidence,
                 x.MatchType,
                 x.Evidence,
-                x.Suggestion))
+                x.Suggestion,
+                x.ResolvedBy))
             .ToList();
 
         var totalCases = cases.Count;

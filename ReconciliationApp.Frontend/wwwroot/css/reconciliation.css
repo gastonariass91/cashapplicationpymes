@@ -2090,3 +2090,140 @@ td.sel .checkbox{
 .reconcTable .cellSub{
   line-height: 1.25;
 }
+
+/* --- Layout split progreso + kpis --- */
+.runProgressLayout {
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+}
+.runProgressLeft {
+  flex: 1;
+  min-width: 0;
+}
+.runProgressRight {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-shrink: 0;
+  border-left: 1px solid rgba(255,255,255,0.06);
+  padding-left: 24px;
+}
+.kpi-big {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 120px;
+}
+.kpi-big-label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.kpi-big-label .mini {
+  font-size: 11px;
+  color: rgba(255,255,255,0.3);
+  font-weight: 400;
+  text-transform: none;
+  margin-left: 4px;
+}
+.kpi-big-value {
+  font-size: 26px;
+  font-weight: 950;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+/* Header fijo */
+.header.card {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+/* --- Layout split progreso + kpis --- */
+.runProgressLayout {
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+}
+.runProgressLeft {
+  flex: 1;
+  min-width: 0;
+}
+.runProgressRight {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-shrink: 0;
+  border-left: 1px solid rgba(255,255,255,0.06);
+  padding-left: 24px;
+}
+.kpi-big {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 120px;
+}
+.kpi-big-label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.kpi-big-label .mini {
+  font-size: 11px;
+  color: rgba(255,255,255,0.3);
+  font-weight: 400;
+  text-transform: none;
+  margin-left: 4px;
+}
+.kpi-big-value {
+  font-size: 26px;
+  font-weight: 950;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+/* Header fijo */
+.header.card {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+/* Fix layout split */
+.runProgressLayout {
+  flex-direction: row !important;
+}
+.runProgressRight {
+  flex-direction: row !important;
+}
+
+/* Fix runProgressLayout display */
+.runProgressLayout { display: flex !important; }
+.runProgressRight { display: flex !important; }
+
+/* === LAYOUT FIX FINAL === */
+.runProgress > .runProgressLayout {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 24px;
+  align-items: center;
+}
+.runProgress > .runProgressLayout > .runProgressLeft {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+.runProgress > .runProgressLayout > .runProgressRight {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 20px;
+  flex-shrink: 0;
+  border-left: 1px solid rgba(255,255,255,0.07);
+  padding-left: 24px;
+  align-items: center;
+}

@@ -3,58 +3,33 @@ namespace ReconciliationApp.Domain.Entities.ReconciliationReview;
 public sealed class ReconciliationCase
 {
     public Guid Id { get; private set; } = Guid.NewGuid();
-
     public Guid ReconciliationRunId { get; private set; }
-
     public ReconciliationRun Run { get; private set; } = default!;
-
     public string CaseId { get; private set; } = default!;
-
     public int? DebtRowNumber { get; private set; }
-
     public int? PaymentRowNumber { get; private set; }
-
     public string Customer { get; private set; } = default!;
-
     public decimal DebtAmount { get; private set; }
-
     public decimal PaymentAmount { get; private set; }
-
     public decimal Delta { get; private set; }
-
     public string Rule { get; private set; } = default!;
-
     public string Status { get; private set; } = "pending";
-
+    public string? ResolvedBy { get; private set; }
     public string Confidence { get; private set; } = default!;
-
     public string MatchType { get; private set; } = default!;
-
     public string Evidence { get; private set; } = default!;
-
     public string Suggestion { get; private set; } = default!;
-
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
-
     public DateTimeOffset UpdatedAt { get; private set; } = DateTimeOffset.UtcNow;
 
     private ReconciliationCase() { }
 
     public ReconciliationCase(
-        Guid runId,
-        string caseId,
-        int? debtRow,
-        int? paymentRow,
-        string customer,
-        decimal debtAmount,
-        decimal paymentAmount,
-        decimal delta,
-        string rule,
-        string status,
-        string confidence,
-        string matchType,
-        string evidence,
-        string suggestion)
+        Guid runId, string caseId, int? debtRow, int? paymentRow,
+        string customer, decimal debtAmount, decimal paymentAmount,
+        decimal delta, string rule, string status, string confidence,
+        string matchType, string evidence, string suggestion,
+        string? resolvedBy = null)
     {
         ReconciliationRunId = runId;
         CaseId = caseId;
@@ -70,14 +45,14 @@ public sealed class ReconciliationCase
         MatchType = matchType;
         Evidence = evidence;
         Suggestion = suggestion;
+        ResolvedBy = resolvedBy;
     }
 
     public void Accept()
     {
         Status = "ok";
-        if (Confidence == "low")
-            Confidence = "medium";
-
+        ResolvedBy = "user";
+        if (Confidence == "low") Confidence = "medium";
         Suggestion = "Aceptar";
         UpdatedAt = DateTimeOffset.UtcNow;
     }
@@ -85,6 +60,7 @@ public sealed class ReconciliationCase
     public void MarkException()
     {
         Status = "exception";
+        ResolvedBy = "user";
         Suggestion = "Excepción";
         UpdatedAt = DateTimeOffset.UtcNow;
     }

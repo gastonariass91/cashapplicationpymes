@@ -15,4 +15,5 @@ public sealed class ApiReconciliationCaseDto
     public string MatchType { get; set; } = "";
     public string Evidence { get; set; } = "";
     public string Suggestion { get; set; } = "";
+    public string? ResolvedBy { get; set; }
 }

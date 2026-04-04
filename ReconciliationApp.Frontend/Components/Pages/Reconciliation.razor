@@ -30,33 +30,36 @@ else if (!string.IsNullOrWhiteSpace(Store.LoadError))
 else
 {
 <div class="runProgress card">
-  <div class="runProgressTop">
-    <div>
+  <div class="runProgressLayout">
+    <div class="runProgressLeft">
       <div class="runProgressTitle">Progreso de conciliación</div>
-      <div class="runProgressSub">@ResolvedCount de @Store.Rows.Count casos resueltos</div>
+      <div class="runProgressSub">@Store.PendingCount pendiente@(Store.PendingCount == 1 ? "" : "s") de @Store.Rows.Count casos</div>
+      <div class="progressBar">
+        <div class="progressBarFill" style="width:@(RunProgressPct)%"></div>
+      </div>
+      <div class="runProgressMeta">
+        <span>Automático <b>@Store.AutoResolvedCount</b></span>
+        <span>Manual <b>@Store.ManualResolvedCount</b></span>
+        <span>Pendientes <b>@Store.PendingCount</b></span>
+        <span>Excepciones <b>@Store.ExceptionCount</b></span>
+      </div>
     </div>
-
-    <div class="runProgressActions">
-      <span class="small">Hotkeys: 1 · 2 · 3 · A · X · V · Esc · Ctrl/Cmd+K</span>
+    <div class="runProgressRight">
+      <div class="kpi-big">
+        <div class="kpi-big-label">Deudas <span class="mini">@(Store.DebtsRowsTotal) filas</span></div>
+        <div class="kpi-big-value">@ReconciliationStore.Money(Store.DebtsAmtTotal)</div>
+      </div>
+      <div class="kpi-big">
+        <div class="kpi-big-label">Pagos <span class="mini">@(Store.PaysRowsTotal) filas</span></div>
+        <div class="kpi-big-value">@ReconciliationStore.Money(Store.PaysAmtTotal)</div>
+      </div>
     </div>
-  </div>
-
-  <div class="progressBar">
-    <div class="progressBarFill" style="width:@($"{RunProgressPct}%")"></div>
-  </div>
-
-  <div class="runProgressMeta">
-    <span>Resueltos <b>@ResolvedCount</b></span>
-    <span>Automáticos <b>@Store.AutoCount</b></span>
-    <span>Pendientes <b>@Store.PendingCount</b></span>
-    <span>Excepciones <b>@Store.ExceptionCount</b></span>
   </div>
 </div>
 
 @if (CommandPaletteOpen)
 {
   <div class="commandOverlay" @onclick="ClosePalette"></div>
-
   <div class="commandPalette card" role="dialog" aria-label="Acciones rápidas">
     <div class="commandHead">
       <b>Acciones rápidas</b>
@@ -64,38 +67,31 @@ else
         <svg class="icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
     </div>
-
     <div class="commandBody">
       <button class="commandItem" @onclick="PaletteViewAuto">
         <span class="commandTitle">Ir a Automáticas</span>
         <span class="commandHint">1</span>
       </button>
-
       <button class="commandItem" @onclick="PaletteViewPending">
         <span class="commandTitle">Ir a Pendientes</span>
         <span class="commandHint">2</span>
       </button>
-
       <button class="commandItem" @onclick="PaletteViewExceptions">
         <span class="commandTitle">Ir a Excepciones</span>
         <span class="commandHint">3</span>
       </button>
-
       <button class="commandItem" @onclick="PaletteAcceptVisible">
         <span class="commandTitle">Aceptar visibles</span>
         <span class="commandHint">V</span>
       </button>
-
       <button class="commandItem" @onclick="PaletteAcceptCurrent">
         <span class="commandTitle">Aceptar caso abierto</span>
         <span class="commandHint">A</span>
       </button>
-
       <button class="commandItem" @onclick="PaletteExceptionCurrent">
         <span class="commandTitle">Marcar excepción del caso abierto</span>
         <span class="commandHint">X</span>
       </button>
-
       <button class="commandItem" @onclick="PaletteFocusSearch">
         <span class="commandTitle">Ir al buscador</span>
         <span class="commandHint">F</span>
@@ -103,29 +99,6 @@ else
     </div>
   </div>
 }
-
-<div class="kpis compact">
-  <div class="card kpi">
-    <div class="label">Deudas <span class="mini">@($"{Store.DebtsRowsTotal} filas")</span></div>
-    <div class="value">@ReconciliationStore.Money(Store.DebtsAmtTotal)</div>
-  </div>
-  <div class="card kpi">
-    <div class="label">Pagos <span class="mini">@($"{Store.PaysRowsTotal} filas")</span></div>
-    <div class="value">@ReconciliationStore.Money(Store.PaysAmtTotal)</div>
-  </div>
-  <div class="card kpi">
-    <div class="label">Automáticas <span class="mini" style="color:rgba(187,255,212,.95)">Reglas</span></div>
-    <div class="value">@Store.AutoCount</div>
-  </div>
-  <div class="card kpi">
-    <div class="label">Pendientes <span class="mini" style="color:rgba(255,232,191,.98)">Revisar</span></div>
-    <div class="value">@Store.PendingCount</div>
-  </div>
-  <div class="card kpi">
-    <div class="label">Excepciones <span class="mini" style="color:rgba(255,203,203,.98)">Decidir</span></div>
-    <div class="value">@Store.ExceptionCount</div>
-  </div>
-</div>
 
 <div class="tabs">
   <button class="tab @(Store.View==ReconciliationView.Auto?"active":"")" @onclick="() => SetView(ReconciliationView.Auto)">Automáticas (@Store.AutoCount)</button>
@@ -161,22 +134,17 @@ else
 
 @if (!string.IsNullOrWhiteSpace(PageToast))
 {
-  <div class="pageToast">
-    @PageToast
-  </div>
+  <div class="pageToast">@PageToast</div>
 }
 }
 
 @code {
-  [Parameter]
-  public string? RunId { get; set; }
-
+  [Parameter] public string? RunId { get; set; }
   private DotNetObjectReference<Reconciliation>? _objRef;
   private bool CommandPaletteOpen;
   private string? PageToast;
 
-  private string? EffectiveRunId =>
-      !string.IsNullOrWhiteSpace(RunId) ? RunId : Store.RunId;
+  private string? EffectiveRunId => !string.IsNullOrWhiteSpace(RunId) ? RunId : Store.RunId;
 
   private string LoadErrorTitle =>
       IsNoDataError ? "Todavía no hay conciliaciones disponibles" : "Error al cargar conciliación";
@@ -192,19 +160,16 @@ else
        Store.LoadError.Contains("No hay una conciliación actual disponible", StringComparison.OrdinalIgnoreCase));
 
   int ResolvedCount => Store.AutoCount + Store.ExceptionCount;
-  int RunProgressPct => Store.Rows.Count == 0 ? 0 : (int)Math.Round((double)ResolvedCount / Store.Rows.Count * 100);
+  int RunProgressPct => Store.Rows.Count == 0 ? 0
+      : (int)Math.Round((double)(Store.Rows.Count - Store.PendingCount) / Store.Rows.Count * 100);
 
   protected override void OnInitialized()
   {
-    if (!Auth.IsAuthenticated)
-        Nav.NavigateTo("/login");
+    if (!Auth.IsAuthenticated) Nav.NavigateTo("/login");
     Store.OnChange += HandleStoreChange;
   }
 
-  protected override async Task OnParametersSetAsync()
-  {
-    await ReloadRunAsync();
-  }
+  protected override async Task OnParametersSetAsync() => await ReloadRunAsync();
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
@@ -219,42 +184,25 @@ else
   {
     Store.Selected.Clear();
     Store.CloseDrawer();
-
     try
     {
       ApiReconciliationRunDto? dto;
-
       if (string.IsNullOrWhiteSpace(RunId))
       {
         dto = await ApiClient.GetCurrentRunAsync(Auth.CompanyId);
-        if (dto is null)
-        {
-          Store.SetLoadError("No hay una conciliación actual disponible para esta company.");
-          return;
-        }
+        if (dto is null) { Store.SetLoadError("No hay una conciliación actual disponible para esta company."); return; }
       }
       else
       {
         dto = await ApiClient.GetRunAsync(RunId);
-        if (dto is null)
-        {
-          Store.SetLoadError("La API devolvió una respuesta vacía.");
-          return;
-        }
+        if (dto is null) { Store.SetLoadError("La API devolvió una respuesta vacía."); return; }
       }
-
       Store.LoadFromApi(dto);
     }
-    catch (Exception ex)
-    {
-      Store.SetLoadError(ex.Message);
-    }
+    catch (Exception ex) { Store.SetLoadError(ex.Message); }
   }
 
-  void HandleStoreChange()
-  {
-    InvokeAsync(StateHasChanged);
-  }
+  void HandleStoreChange() => InvokeAsync(StateHasChanged);
 
   public void Dispose()
   {
@@ -268,46 +216,28 @@ else
   {
     switch (action)
     {
-      case "togglePalette":
-        CommandPaletteOpen = !CommandPaletteOpen;
-        break;
+      case "togglePalette": CommandPaletteOpen = !CommandPaletteOpen; break;
       case "closeContext":
         if (CommandPaletteOpen) CommandPaletteOpen = false;
         else if (Store.DrawerOpen) Store.CloseDrawer();
         break;
-      case "viewAuto":
-        Store.SetView(ReconciliationView.Auto);
-        CommandPaletteOpen = false;
-        break;
-      case "viewPending":
-        Store.SetView(ReconciliationView.Pending);
-        CommandPaletteOpen = false;
-        break;
-      case "viewExceptions":
-        Store.SetView(ReconciliationView.Exceptions);
-        CommandPaletteOpen = false;
-        break;
+      case "viewAuto": Store.SetView(ReconciliationView.Auto); CommandPaletteOpen = false; break;
+      case "viewPending": Store.SetView(ReconciliationView.Pending); CommandPaletteOpen = false; break;
+      case "viewExceptions": Store.SetView(ReconciliationView.Exceptions); CommandPaletteOpen = false; break;
       case "acceptVisible":
-        if (Store.View == ReconciliationView.Auto && Store.VisibleRows().Any())
-          await AcceptVisible();
-        CommandPaletteOpen = false;
-        break;
+        if (Store.View == ReconciliationView.Auto && Store.VisibleRows().Any()) await AcceptVisible();
+        CommandPaletteOpen = false; break;
       case "acceptCurrent":
-        if (Store.SelectedKey is not null)
-          await AcceptOne();
-        CommandPaletteOpen = false;
-        break;
+        if (Store.SelectedKey is not null) await AcceptOne();
+        CommandPaletteOpen = false; break;
       case "exceptionCurrent":
-        if (Store.SelectedKey is not null)
-          await MarkException();
-        CommandPaletteOpen = false;
-        break;
+        if (Store.SelectedKey is not null) await MarkException();
+        CommandPaletteOpen = false; break;
       case "focusSearch":
         CommandPaletteOpen = false;
         await JS.InvokeVoidAsync("reconciliationHotkeys.focusSelector", ".reconcTable .search input");
         break;
     }
-
     await InvokeAsync(StateHasChanged);
   }
 
@@ -325,85 +255,37 @@ else
   void SetConfAlta() => Store.SetConfFilter("Alta");
   void SetConfAltaMedia() => Store.SetConfFilter("Alta+Media");
 
-  Task OnQueryChanged(string query)
-  {
-    Store.SetQuery(query);
-    return Task.CompletedTask;
-  }
-
-  Task ToggleOne((string Key, bool On) args)
-  {
-    Store.ToggleSelected(args.Key, args.On);
-    return Task.CompletedTask;
-  }
-
-  Task ToggleAll(bool on)
-  {
-    Store.SelectAllVisible(on);
-    return Task.CompletedTask;
-  }
-
-  Task ClearSelection()
-  {
-    Store.Selected.Clear();
-    Store.CloseDrawer();
-    return Task.CompletedTask;
-  }
-
-  Task OpenDrawer(string key)
-  {
-    Store.OpenDrawer(key);
-    return Task.CompletedTask;
-  }
-
-  Task CloseDrawer()
-  {
-    Store.CloseDrawer();
-    return Task.CompletedTask;
-  }
+  Task OnQueryChanged(string query) { Store.SetQuery(query); return Task.CompletedTask; }
+  Task ToggleOne((string Key, bool On) args) { Store.ToggleSelected(args.Key, args.On); return Task.CompletedTask; }
+  Task ToggleAll(bool on) { Store.SelectAllVisible(on); return Task.CompletedTask; }
+  Task ClearSelection() { Store.Selected.Clear(); Store.CloseDrawer(); return Task.CompletedTask; }
+  Task OpenDrawer(string key) { Store.OpenDrawer(key); return Task.CompletedTask; }
+  Task CloseDrawer() { Store.CloseDrawer(); return Task.CompletedTask; }
 
   async Task AcceptVisible()
   {
     var runId = EffectiveRunId;
     if (string.IsNullOrWhiteSpace(runId)) return;
-
     var ids = Store.VisibleRows().Select(x => x.Key).ToList();
     if (ids.Count == 0) return;
-
     var ok = await ApiClient.BulkAcceptAsync(runId, ids);
-    if (ok)
-    {
-      await ReloadRunAsync();
-      await ShowPageToast("✔ Casos visibles aceptados");
-    }
+    if (ok) { await ReloadRunAsync(); await ShowPageToast("✔ Casos visibles aceptados"); }
   }
 
   async Task AcceptOne()
   {
     var runId = EffectiveRunId;
     if (string.IsNullOrWhiteSpace(runId) || Store.SelectedKey is null) return;
-
     var ok = await ApiClient.AcceptCaseAsync(runId, Store.SelectedKey);
-    if (ok)
-    {
-      await ReloadRunAsync();
-      Store.CloseDrawer();
-      await ShowPageToast("✔ Caso aceptado");
-    }
+    if (ok) { await ReloadRunAsync(); Store.CloseDrawer(); await ShowPageToast("✔ Caso aceptado"); }
   }
 
   async Task MarkException()
   {
     var runId = EffectiveRunId;
     if (string.IsNullOrWhiteSpace(runId) || Store.SelectedKey is null) return;
-
     var ok = await ApiClient.MarkExceptionAsync(runId, Store.SelectedKey);
-    if (ok)
-    {
-      await ReloadRunAsync();
-      Store.CloseDrawer();
-      await ShowPageToast("⚠ Marcado como excepción");
-    }
+    if (ok) { await ReloadRunAsync(); Store.CloseDrawer(); await ShowPageToast("⚠ Marcado como excepción"); }
   }
 
   async Task ShowPageToast(string message)

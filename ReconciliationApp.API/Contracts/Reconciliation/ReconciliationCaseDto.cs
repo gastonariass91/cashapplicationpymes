@@ -13,5 +13,6 @@ public sealed record ReconciliationCaseDto(
     string Confidence,
     string MatchType,
     string Evidence,
-    string Suggestion
+    string Suggestion,
+    string? ResolvedBy = null
 );

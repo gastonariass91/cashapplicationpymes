@@ -120,7 +120,8 @@ public sealed class ReconcileRunHandler
                 "high",
                 "exact",
                 "Mismo cliente · monto exacto",
-                "Aceptar"
+                "Aceptar",
+                "auto"
             ));
         }
 
