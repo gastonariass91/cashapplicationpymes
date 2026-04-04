@@ -10,7 +10,7 @@ public sealed class ReconciliationStore
 
     public event Action? OnChange;
 
-    public ReconciliationView View { get; private set; } = ReconciliationView.Auto;
+    public ReconciliationView View { get; private set; } = ReconciliationView.Pending;
     public string Query { get; private set; } = "";
     public string ConfFilter { get; private set; } = "all"; // all | Alta | Alta+Media
 

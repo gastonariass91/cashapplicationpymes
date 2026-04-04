@@ -35,13 +35,13 @@ else
       <div class="runProgressTitle">Progreso de conciliación</div>
       <div class="runProgressSub">@Store.PendingCount pendiente@(Store.PendingCount == 1 ? "" : "s") de @Store.Rows.Count casos</div>
       <div class="progressBar">
-        <div class="progressBarFill" style="width:@(RunProgressPct)%"></div>
+        <div class="progressBarFill" style="width:@(RunProgressPct)%; position:relative">
+          <span style="position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:9px;font-weight:900;color:rgba(255,255,255,.9)">@(RunProgressPct)%</span>
+        </div>
       </div>
       <div class="runProgressMeta">
         <span>Automático <b>@Store.AutoResolvedCount</b></span>
         <span>Manual <b>@Store.ManualResolvedCount</b></span>
-        <span>Pendientes <b>@Store.PendingCount</b></span>
-        <span>Excepciones <b>@Store.ExceptionCount</b></span>
       </div>
     </div>
     <div class="runProgressRight">
@@ -68,12 +68,12 @@ else
       </button>
     </div>
     <div class="commandBody">
-      <button class="commandItem" @onclick="PaletteViewAuto">
-        <span class="commandTitle">Ir a Automáticas</span>
-        <span class="commandHint">1</span>
-      </button>
       <button class="commandItem" @onclick="PaletteViewPending">
         <span class="commandTitle">Ir a Pendientes</span>
+        <span class="commandHint">1</span>
+      </button>
+      <button class="commandItem" @onclick="PaletteViewAuto">
+        <span class="commandTitle">Ir a Automáticas</span>
         <span class="commandHint">2</span>
       </button>
       <button class="commandItem" @onclick="PaletteViewExceptions">
@@ -101,8 +101,8 @@ else
 }
 
 <div class="tabs">
-  <button class="tab @(Store.View==ReconciliationView.Auto?"active":"")" @onclick="() => SetView(ReconciliationView.Auto)">Automáticas (@Store.AutoCount)</button>
   <button class="tab @(Store.View==ReconciliationView.Pending?"active":"")" @onclick="() => SetView(ReconciliationView.Pending)">Pendientes (@Store.PendingCount)</button>
+  <button class="tab @(Store.View==ReconciliationView.Auto?"active":"")" @onclick="() => SetView(ReconciliationView.Auto)">Automáticas (@Store.AutoCount)</button>
   <button class="tab @(Store.View==ReconciliationView.Exceptions?"active":"")" @onclick="() => SetView(ReconciliationView.Exceptions)">Excepciones (@Store.ExceptionCount)</button>
 
   @if (Store.View == ReconciliationView.Auto)
