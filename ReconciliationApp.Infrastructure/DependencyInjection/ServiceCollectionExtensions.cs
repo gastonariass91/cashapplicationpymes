@@ -23,10 +23,16 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
         services.AddScoped<ICompanyRepository, EfCompanyRepository>();
+        services.AddScoped<ICustomerRepository, EfCustomerRepository>();
+        services.AddScoped<IDebtRepository, EfDebtRepository>();
+        services.AddScoped<IPaymentRepository, EfPaymentRepository>();
         services.AddScoped<IBatchRepository, EfBatchRepository>();
         services.AddScoped<IBatchRunRepository, EfBatchRunRepository>();
         services.AddScoped<IImportRowRepository, EfImportRowRepository>();
         services.AddScoped<IReconciliationMatchRepository, EfReconciliationMatchRepository>();
+        services.AddScoped<IReconciliationCaseRepository, EfReconciliationCaseRepository>();
+        services.AddScoped<IReconciliationReviewRepository, EfReconciliationReviewRepository>();
+        services.AddScoped<IUserRepository, EfUserRepository>();
 
         services.AddScoped<IRunNumberService, RunNumberService>();
 

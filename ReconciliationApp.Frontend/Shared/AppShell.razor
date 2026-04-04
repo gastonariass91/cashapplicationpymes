@@ -1,0 +1,37 @@
+@using ReconciliationApp.Frontend.Components.Shell
+@using ReconciliationApp.Frontend.State
+@inject LayoutState Layout
+@implements IDisposable
+
+<Sidebar />
+
+<div class="app">
+    <main class="main">
+        <div class="wrap">
+            <Topbar />
+
+            <div class="shellBody">
+                @ChildContent
+            </div>
+        </div>
+    </main>
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Layout.OnChange += OnLayoutChange;
+    }
+
+    private void OnLayoutChange()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Layout.OnChange -= OnLayoutChange;
+    }
+}

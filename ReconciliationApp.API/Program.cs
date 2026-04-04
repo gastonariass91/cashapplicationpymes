@@ -1,18 +1,16 @@
+using System.Text;
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpLogging;
+using Microsoft.IdentityModel.Tokens;
 using ReconciliationApp.API.Endpoints;
 using ReconciliationApp.API.ErrorHandling;
 using ReconciliationApp.API.Observability;
 using ReconciliationApp.API.Validation;
+using ReconciliationApp.Application.Abstractions;
 using ReconciliationApp.Application.DependencyInjection;
+using ReconciliationApp.Infrastructure.Auth;
 using ReconciliationApp.Infrastructure.DependencyInjection;
-using ReconciliationApp.Application.Features.Batches.CreateBatch;
-using ReconciliationApp.Application.Features.Batches.CreateRun;
-using ReconciliationApp.Application.Features.Companies.CreateCompany;
-using ReconciliationApp.Application.Features.Imports.UploadDebtCsv;
-using ReconciliationApp.Application.Features.Imports.UploadPaymentsCsv;
-using ReconciliationApp.Application.Features.Reconciliation.ReconcileRun;
-using ReconciliationApp.Application.Features.Reconciliation.ReconcileResult;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,21 +18,17 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Handlers
-builder.Services.AddScoped<CreateCompanyHandler>();
-builder.Services.AddScoped<CreateBatchHandler>();
-builder.Services.AddScoped<CreateRunHandler>();
-builder.Services.AddScoped<UploadDebtCsvHandler>();
-builder.Services.AddScoped<UploadPaymentsCsvHandler>();
-builder.Services.AddScoped<ReconcileRunHandler>();
-builder.Services.AddScoped<ReconcileResultHandler>();
+// ICurrentUser — lee el CompanyId y Role del JWT en cada request
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
 
 // Validation (FluentValidation)
 builder.Services.AddValidatorsFromAssemblyContaining<CreateCompanyRequestValidator>();
 
 // Health checks
 var cs = builder.Configuration.GetConnectionString("Default");
-builder.Services.AddHealthChecks().AddNpgSql(cs!, name: "postgres");
+builder.Services.AddHealthChecks();//
+    //.AddNpgsql(cs!);
 
 // Errors (ProblemDetails + ExceptionHandler)
 builder.Services.AddProblemDetails();
@@ -49,8 +43,64 @@ builder.Services.AddHttpLogging(o =>
                    | HttpLoggingFields.Duration;
 });
 
+// JWT Authentication
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? throw new InvalidOperationException("Jwt:Key is required in configuration.");
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer           = true,
+            ValidateAudience         = true,
+            ValidateLifetime         = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer              = builder.Configuration["Jwt:Issuer"] ?? "ReconciliationApp",
+            ValidAudience            = builder.Configuration["Jwt:Audience"] ?? "ReconciliationApp",
+            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            ClockSkew                = TimeSpan.FromMinutes(1),
+        };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    // Política por defecto: cualquier usuario autenticado
+    options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+
+    // Política solo para Admin
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+});
+
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    // Permite enviar el token JWT desde Swagger UI
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+    });
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 var app = builder.Build();
 
@@ -61,14 +111,28 @@ app.UseStatusCodePages();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseHttpLogging();
 
-app.UseSwagger();
-app.UseSwaggerUI();
+// Swagger solo en Development
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
-// Endpoints por feature
+// Auth middleware (orden importa: primero authn, después authz)
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Endpoints
 app.MapHealthEndpoints();
+app.MapAuthEndpoints();           // POST /auth/login (público), POST /auth/register (Admin)
 app.MapCompanyEndpoints();
+app.MapCustomerEndpoints();
 app.MapBatchEndpoints();
 app.MapImportEndpoints();
 app.MapReconciliationEndpoints();
+app.MapReconciliationRunQueryEndpoints();
 
 app.Run();
+
+public partial class Program { } // expone Program para WebApplicationFactory
+

@@ -6,5 +6,6 @@ public interface IBatchRepository
 {
     void Add(ReconciliationBatch batch);
     Task<ReconciliationBatch?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<ReconciliationBatch?> GetByCompanyAndPeriodAsync(Guid companyId, DateOnly from, DateOnly to, CancellationToken ct = default);
     Task<bool> ExistsForPeriodAsync(Guid companyId, DateOnly from, DateOnly to, CancellationToken ct = default);
 }

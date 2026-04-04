@@ -1,3 +1,5 @@
+using ReconciliationApp.Domain.Enums;
+
 namespace ReconciliationApp.Domain.Entities.Core;
 
 public sealed class Company
@@ -9,25 +11,33 @@ public sealed class Company
     // Config inicial (MVP)
     public int AutoApplyScoreThreshold { get; private set; } = 90;
 
-    // Validation (default) / Automatic (luego)
-    public string ReconciliationMode { get; private set; } = "Validation";
+    // Tipado con enum en lugar de string libre
+    public ReconciliationMode ReconciliationMode { get; private set; } = ReconciliationMode.Validation;
 
     private Company() { } // EF
 
     public Company(string name)
     {
-        Name = string.IsNullOrWhiteSpace(name) ? throw new ArgumentException("Company name is required") : name.Trim();
+        Name = string.IsNullOrWhiteSpace(name)
+            ? throw new ArgumentException("Company name is required")
+            : name.Trim();
     }
 
     public void SetAutoApplyScoreThreshold(int threshold)
     {
-        if (threshold < 0 || threshold > 100) throw new ArgumentOutOfRangeException(nameof(threshold));
+        if (threshold < 0 || threshold > 100)
+            throw new ArgumentOutOfRangeException(nameof(threshold));
+
         AutoApplyScoreThreshold = threshold;
     }
 
-    public void SetMode(string mode)
+    public void SetMode(ReconciliationMode mode)
     {
-        if (mode is not ("Validation" or "Automatic")) throw new ArgumentException("Invalid mode");
+        // Al ser enum, el compilador garantiza valores válidos.
+        // La guarda extra protege contra casts inválidos (ej: (ReconciliationMode)99).
+        if (!Enum.IsDefined(typeof(ReconciliationMode), mode))
+            throw new ArgumentException($"Invalid reconciliation mode: {mode}", nameof(mode));
+
         ReconciliationMode = mode;
     }
 }

@@ -1,4 +1,5 @@
 using System.Globalization;
+using ReconciliationApp.Frontend.Contracts.Reconciliation;
 using ReconciliationApp.Frontend.Models;
 
 namespace ReconciliationApp.Frontend.State;
@@ -7,7 +8,9 @@ public sealed class ReconciliationStore
 {
     private static readonly CultureInfo EsAr = CultureInfo.GetCultureInfo("es-AR");
 
-    public ReconciliationView View { get; private set; } = ReconciliationView.Auto;
+    public event Action? OnChange;
+
+    public ReconciliationView View { get; private set; } = ReconciliationView.Pending;
     public string Query { get; private set; } = "";
     public string ConfFilter { get; private set; } = "all"; // all | Alta | Alta+Media
 
@@ -15,24 +18,26 @@ public sealed class ReconciliationStore
     public string? SelectedKey { get; private set; }
     public bool DrawerOpen { get; private set; }
 
-    public IReadOnlyList<ReconciliationRow> Rows => _rows;
-    private readonly List<ReconciliationRow> _rows = new()
-    {
-        new(1,1,"C1",1000,1000,0,"Cliente+Monto",RowStatus.Ok,Confidence.Alta,ReconMatchType.Exact,"Mismo cliente · monto exacto · ref coincide","Aceptar"),
-        new(4,3,"C3",1200,1200,0,"Cliente+Monto",RowStatus.Ok,Confidence.Alta,ReconMatchType.Exact,"Mismo cliente · monto exacto","Aceptar"),
-        new(5,4,"C4",700,700,0,"Cliente+Monto",RowStatus.Ok,Confidence.Alta,ReconMatchType.Exact,"Mismo cliente · monto exacto","Aceptar"),
-        new(7,6,"C5",350,350,0,"Cliente+Monto",RowStatus.Ok,Confidence.Media,ReconMatchType.Exact,"Cliente coincide · sin ref","Aceptar (c/ cuidado)"),
-        new(2,2,"C1",500,450,-50,"Monto cercano",RowStatus.Pending,Confidence.Media,ReconMatchType.Partial,"Pago menor · posible parcial","Revisar parcial"),
-        new(6,8,"C2",900,930,30,"Monto cercano",RowStatus.Pending,Confidence.Media,ReconMatchType.Amb,"Varias deudas posibles","Revisar"),
-        new(3,5,"C2",200,200,0,"Duplicado?",RowStatus.Exception,Confidence.Baja,ReconMatchType.Dup,"Pago similar ya conciliado","Excepción"),
-    };
+    public string RunId { get; private set; } = "";
+    public string CompanyId { get; private set; } = "";
+    public string CompanyName { get; private set; } = "";
+    public string Period { get; private set; } = "";
+    public string RunStatus { get; private set; } = "";
 
-    public decimal DebtsAmtTotal => 1_250_000m;
-    public decimal PaysAmtTotal => 1_240_000m;
-    public int DebtsRowsTotal => 28;
-    public int PaysRowsTotal => 26;
+    public bool IsLoaded { get; private set; }
+    public string? LoadError { get; private set; }
+
+    public IReadOnlyList<ReconciliationRow> Rows => _rows;
+    private readonly List<ReconciliationRow> _rows = [];
+
+    public decimal DebtsAmtTotal { get; private set; }
+    public decimal PaysAmtTotal { get; private set; }
+    public int DebtsRowsTotal { get; private set; }
+    public int PaysRowsTotal { get; private set; }
 
     public int AutoCount => _rows.Count(r => r.Status == RowStatus.Ok);
+    public int AutoResolvedCount => _rows.Count(r => r.Status == RowStatus.Ok && r.ResolvedBy == "auto");
+    public int ManualResolvedCount => _rows.Count(r => r.Status == RowStatus.Ok && r.ResolvedBy == "user");
     public int PendingCount => _rows.Count(r => r.Status == RowStatus.Pending);
     public int ExceptionCount => _rows.Count(r => r.Status == RowStatus.Exception);
     public int AutoRate => _rows.Count == 0 ? 0 : (int)Math.Round((double)AutoCount / _rows.Count * 100);
@@ -44,6 +49,103 @@ public sealed class ReconciliationStore
     public IEnumerable<ReconciliationRow> VisibleRows()
         => _rows.Where(PassesView).Where(PassesConf).Where(PassesQuery);
 
+    public IReadOnlyList<ReconciliationRow> VisibleRowsList()
+        => VisibleRows().ToList();
+
+    public bool HasPreviousVisibleSelection()
+    {
+        var currentIndex = CurrentVisibleIndex();
+        return currentIndex > 0;
+    }
+
+    public bool HasNextVisibleSelection()
+    {
+        var rows = VisibleRowsList();
+        var currentIndex = CurrentVisibleIndex();
+        return currentIndex >= 0 && currentIndex < rows.Count - 1;
+    }
+
+    public void OpenPreviousVisible()
+    {
+        var rows = VisibleRowsList();
+        var currentIndex = CurrentVisibleIndex();
+        if (currentIndex <= 0) return;
+
+        SelectedKey = rows[currentIndex - 1].Key;
+        DrawerOpen = true;
+        OnChange?.Invoke();
+    }
+
+    public void OpenNextVisible()
+    {
+        var rows = VisibleRowsList();
+        var currentIndex = CurrentVisibleIndex();
+        if (currentIndex < 0 || currentIndex >= rows.Count - 1) return;
+
+        SelectedKey = rows[currentIndex + 1].Key;
+        DrawerOpen = true;
+        OnChange?.Invoke();
+    }
+
+    public int CurrentVisiblePosition()
+    {
+        var currentIndex = CurrentVisibleIndex();
+        return currentIndex < 0 ? 0 : currentIndex + 1;
+    }
+
+    public int VisibleCount()
+        => VisibleRowsList().Count;
+
+    public void LoadFromApi(ApiReconciliationRunDto dto)
+    {
+        _rows.Clear();
+
+        RunId = dto.Summary.RunId;
+        CompanyId = dto.Summary.CompanyId;
+        CompanyName = dto.Summary.CompanyName;
+        Period = dto.Summary.Period;
+        RunStatus = dto.Summary.Status;
+
+        DebtsRowsTotal = dto.Summary.DebtsRowsTotal;
+        PaysRowsTotal = dto.Summary.PaymentsRowsTotal;
+        DebtsAmtTotal = dto.Summary.DebtsAmountTotal;
+        PaysAmtTotal = dto.Summary.PaymentsAmountTotal;
+
+        foreach (var c in dto.Cases)
+        {
+            _rows.Add(new ReconciliationRow(
+                CaseId: c.CaseId,
+                DebtRowNumber: c.DebtRowNumber == 0 ? null : c.DebtRowNumber,
+                PaymentRowNumber: c.PaymentRowNumber == 0 ? null : c.PaymentRowNumber,
+                Customer: c.Customer,
+                DebtAmount: c.DebtAmount,
+                PaymentAmount: c.PaymentAmount,
+                Delta: c.Delta,
+                Rule: c.Rule,
+                Status: MapStatus(c.Status),
+                Confidence: MapConfidence(c.Confidence),
+                Type: MapMatchType(c.MatchType),
+                Evidence: c.Evidence,
+                Suggestion: c.Suggestion,
+                ResolvedBy: c.ResolvedBy
+            ));
+        }
+
+        IsLoaded = true;
+        LoadError = null;
+        Selected.Clear();
+        SelectedKey = null;
+        DrawerOpen = false;
+        OnChange?.Invoke();
+    }
+
+    public void SetLoadError(string message)
+    {
+        LoadError = message;
+        IsLoaded = false;
+        OnChange?.Invoke();
+    }
+
     public void SetView(ReconciliationView view)
     {
         View = view;
@@ -52,24 +154,28 @@ public sealed class ReconciliationStore
         DrawerOpen = false;
         Query = "";
         if (View != ReconciliationView.Auto) ConfFilter = "all";
+        OnChange?.Invoke();
     }
 
     public void SetQuery(string q)
     {
         Query = q ?? "";
         Selected.Clear();
+        OnChange?.Invoke();
     }
 
     public void SetConfFilter(string conf)
     {
         ConfFilter = conf;
         Selected.Clear();
+        OnChange?.Invoke();
     }
 
     public void ToggleSelected(string key, bool on)
     {
         if (on) Selected.Add(key);
         else Selected.Remove(key);
+        OnChange?.Invoke();
     }
 
     public void SelectAllVisible(bool on)
@@ -77,6 +183,7 @@ public sealed class ReconciliationStore
         var keys = VisibleRows().Select(r => r.Key).ToList();
         if (on) foreach (var k in keys) Selected.Add(k);
         else foreach (var k in keys) Selected.Remove(k);
+        OnChange?.Invoke();
     }
 
     public bool AllVisibleSelected()
@@ -96,12 +203,14 @@ public sealed class ReconciliationStore
     {
         SelectedKey = key;
         DrawerOpen = true;
+        OnChange?.Invoke();
     }
 
     public void CloseDrawer()
     {
         DrawerOpen = false;
         SelectedKey = null;
+        OnChange?.Invoke();
     }
 
     public void AcceptByKey(string key)
@@ -118,6 +227,8 @@ public sealed class ReconciliationStore
             Confidence = conf,
             Suggestion = "Aceptar"
         };
+
+        OnChange?.Invoke();
     }
 
     public void ExceptionByKey(string key)
@@ -131,22 +242,39 @@ public sealed class ReconciliationStore
             Status = RowStatus.Exception,
             Suggestion = "Excepción"
         };
+
+        OnChange?.Invoke();
     }
 
     public void AcceptSelected()
     {
         foreach (var k in Selected.ToList()) AcceptByKey(k);
         Selected.Clear();
+        OnChange?.Invoke();
     }
 
     public void AcceptVisible()
     {
         foreach (var r in VisibleRows().ToList()) AcceptByKey(r.Key);
         Selected.Clear();
+        OnChange?.Invoke();
     }
 
     public static string Money(decimal n)
         => n.ToString("C0", EsAr);
+
+    private int CurrentVisibleIndex()
+    {
+        if (SelectedKey is null) return -1;
+
+        var rows = VisibleRowsList();
+        for (var i = 0; i < rows.Count; i++)
+        {
+            if (rows[i].Key == SelectedKey) return i;
+        }
+
+        return -1;
+    }
 
     private bool PassesView(ReconciliationRow r)
         => View switch
@@ -177,4 +305,34 @@ public sealed class ReconciliationStore
 
         return blob.Contains(q);
     }
+
+    private static RowStatus MapStatus(string value)
+        => value.ToLowerInvariant() switch
+        {
+            "ok" => RowStatus.Ok,
+            "pending" => RowStatus.Pending,
+            "exception" => RowStatus.Exception,
+            _ => RowStatus.Pending
+        };
+
+    private static Confidence MapConfidence(string value)
+        => value.ToLowerInvariant() switch
+        {
+            "high" => Confidence.Alta,
+            "medium" => Confidence.Media,
+            "low" => Confidence.Baja,
+            _ => Confidence.Media
+        };
+
+    private static ReconMatchType MapMatchType(string value)
+        => value.ToLowerInvariant() switch
+        {
+            "exact" => ReconMatchType.Exact,
+            "partial" => ReconMatchType.Partial,
+            "multi" => ReconMatchType.Multi,
+            "duplicate" => ReconMatchType.Dup,
+            "ambiguous" => ReconMatchType.Amb,
+            "no_match" => ReconMatchType.NoMatch,
+            _ => ReconMatchType.NoMatch
+        };
 }

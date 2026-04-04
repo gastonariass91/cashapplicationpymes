@@ -1,22 +1,35 @@
 using ReconciliationApp.Frontend.Components;
+using ReconciliationApp.Frontend.Services;
+using ReconciliationApp.Frontend.State;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddSingleton<ReconciliationApp.Frontend.State.LayoutState>();
-// Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents()
-;
+    .AddInteractiveServerComponents();
 
-builder.Services.AddSingleton<ReconciliationApp.Frontend.State.ReconciliationStore>();
+// Estado global
+builder.Services.AddSingleton<LayoutState>();
+builder.Services.AddScoped<ReconciliationStore>();
+builder.Services.AddScoped<AuthState>();
+
+// HTTP clients
+var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "http://localhost:5081";
+
+builder.Services.AddHttpClient<ReconciliationApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+});
+
+builder.Services.AddHttpClient<AuthApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
@@ -26,7 +39,6 @@ app.UseStaticFiles();
 app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode()
-;
+    .AddInteractiveServerRenderMode();
 
 app.Run();

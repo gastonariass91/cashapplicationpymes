@@ -1,15 +1,12 @@
 namespace ReconciliationApp.Frontend.Models;
-
 public enum ReconciliationView { Auto, Pending, Exceptions }
 public enum RowStatus { Ok, Pending, Exception }
 public enum Confidence { Alta, Media, Baja }
-
-// Renamed to avoid conflict with System.IO.MatchType
 public enum ReconMatchType { Exact, Partial, Multi, Dup, Amb, NoMatch }
-
 public sealed record ReconciliationRow(
-    int DebtRowNumber,
-    int PaymentRowNumber,
+    string CaseId,
+    int? DebtRowNumber,
+    int? PaymentRowNumber,
     string Customer,
     decimal DebtAmount,
     decimal PaymentAmount,
@@ -19,8 +16,11 @@ public sealed record ReconciliationRow(
     Confidence Confidence,
     ReconMatchType Type,
     string Evidence,
-    string Suggestion
+    string Suggestion,
+    string? ResolvedBy = null
 )
 {
-    public string Key => $"{DebtRowNumber}-{PaymentRowNumber}";
+    public string Key => string.IsNullOrWhiteSpace(CaseId)
+        ? $"{DebtRowNumber?.ToString() ?? "none"}-{PaymentRowNumber?.ToString() ?? "none"}"
+        : CaseId;
 }
